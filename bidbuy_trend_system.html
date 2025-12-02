@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>비드바이 트렌드 관리 시스템</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * { font-family: 'Malgun Gothic', -apple-system, sans-serif; }
+        .loading { animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div id="app"></div>
+
+    <script>
+        // ============================================
+        // 상태 관리
+        // ============================================
+        const state = {
+            isLoggedIn: false,
+            activeTab: 'dashboard',
+            weekInfo: { month: '12', week: '1' },
+            geminiApiKey: localStorage.getItem('gemini_api_key') || '',
+            isGenerating: false,
+            generatedContent: '',
+            selectedContentType: 'newsletter',
+            trendData: [
+                { id: 1, rank: 1, keyword: '미즈노 글러브', category: '야구용품', searches: 347, change: 23, price: 15000 },
+                { id: 2, rank: 2, keyword: '원피스 피규어', category: '피규어', searches: 282, change: 45, price: 8500 },
+                { id: 3, rank: 3, keyword: '아식스 배트', category: '야구용품', searches: 269, change: 12, price: 25000 },
+                { id: 4, rank: 4, keyword: '건담 프라모델', category: '피규어', searches: 228, change: 8, price: 4500 },
+                { id: 5, rank: 5, keyword: '포켓몬 카드', category: '완구', searches: 217, change: 31, price: 3000 },
+                { id: 6, rank: 6, keyword: '시세이도 선크림', category: '뷰티', searches: 190, change: 15, price: 2800 },
+                { id: 7, rank: 7, keyword: '칼비 감자칩', category: '식품', searches: 172, change: -5, price: 500 },
+                { id: 8, rank: 8, keyword: 'SK-II 에센스', category: '뷰티', searches: 165, change: 18, price: 18000 },
+            ],
+            editingId: null,
+            editForm: {}
+        };
+
+        // ============================================
+        // Gemini API 연동
+        // ============================================
+        async function generateWithGemini(prompt) {
+            if (!state.geminiApiKey) {
+                alert('Gemini API 키를 설정해주세요.');
+                return null;
+            }
+
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${state.geminiApiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: prompt }] }],
+                    generationConfig: {
+                        temperature: 0.8,
+                        topK: 40,
+                        topP: 0.95,
+                        maxOutputTokens: 2048,
+                    }
+                })
+            });
+
+            const data = await response.json();
+            if (data.candidates && data.candidates[0]) {
+                return data.candidates[0].content.parts[0].text;
+            }
+            throw new Error(data.error?.message || 'API 오류');
+        }
+
+        // ============================================
+        // AI 프롬프트 템플릿 (자연스러운 톤)
+        // ============================================
+        function buildPrompt(type) {
+            const { trendData, weekInfo } = state;
+            const top5 = trendData.slice(0, 5);
+            const totalSearches = trendData.reduce((s, d) => s + d.searches, 0);
+            const risingItems = trendData.filter(d => d.change >= 20);
+            const categories = [...new Set(trendData.map(d => d.category))];
+
+            const dataContext = `
+[데이터]
+- 기간: ${weekInfo.month}월 ${weekInfo.week}주차
+- 총 검색량: ${totalSearches.toLocaleString()}건
+- TOP 5 인기 키워드:
+${top5.map((item, i) => `  ${i+1}. ${item.keyword} (${item.category}) - ${item.searches}건, 전주대비 ${item.change >= 0 ? '+' : ''}${item.change}%`).join('\n')}
+- 급상승 키워드 (20% 이상): ${risingItems.map(i => `${i.keyword}(+${i.change}%)`).join(', ') || '없음'}
+- 주요 카테고리: ${categories.join(', ')}
+- 전체 데이터:
+${trendData.map(item => `  - ${item.keyword}: ${item.category}, ${item.searches}건, ${item.change}%, ${item.price?.toLocaleString()}엔`).join('\n')}
+`;
+
+            const prompts = {
+                newsletter: `당신은 비드바이코리아(일본 구매대행 20년 전통)의 마케팅 담당자입니다.
+아래 데이터를 바탕으로 고객에게 보낼 뉴스레터 본문을 작성해주세요.
+
+${dataContext}
+
+[작성 가이드]
+- 톤: 친근하고 대화하듯이, 하지만 전문성도 느껴지게
+- 딱딱한 리포트 말고, 친구가 "야 이거 요즘 진짜 많이 찾더라" 하고 알려주는 느낌
+- 이모지 적절히 활용 (과하지 않게)
+- 왜 이 상품들이 인기인지 맥락/스토리 설명
+- 자연스럽게 구매 유도 (강매 느낌 없이)
+- 비드바이만의 장점 자연스럽게 녹이기 (20년 경험, 빠른 배송, 현지 창고)
+- 300~400자 내외
+
+[피해야 할 것]
+- "안녕하세요, OOO입니다" 같은 뻔한 인사
+- 숫자 나열만 하는 건조한 글
+- "~했습니다" 반복되는 문어체
+- 과도한 이모지
+- 영업 느낌 강한 마무리
+
+자연스럽고 읽고 싶은 뉴스레터 본문만 작성해주세요.`,
+
+                blog: `당신은 일본 구매대행 전문 블로거입니다.
+아래 데이터를 바탕으로 SEO에 좋은 블로그 포스트를 작성해주세요.
+
+${dataContext}
+
+[작성 가이드]
+- 제목 포함 (클릭하고 싶은 제목)
+- 서론: 요즘 뭐가 핫한지 자연스럽게 시작
+- 본론: TOP 3~5 상품 각각 왜 인기인지, 어떤 사람들이 찾는지
+- 실제로 구매할 때 팁이나 주의점
+- 결론: 부담없는 마무리
+- 600~800자 내외
+- 소제목 2~3개 활용
+- 검색 키워드 자연스럽게 포함
+
+블로그 글 전문을 작성해주세요.`,
+
+                sns: `당신은 비드바이코리아 SNS 담당자입니다.
+아래 데이터를 바탕으로 인스타그램/페이스북용 포스트를 작성해주세요.
+
+${dataContext}
+
+[작성 가이드]
+- 짧고 임팩트 있게 (150자 내외)
+- 호기심 유발하는 첫 문장
+- 핵심 1~2개 상품만 언급
+- 해시태그 5~7개
+- 이모지 활용
+- "지금 바로 확인" 같은 CTA
+
+SNS 포스트 전문을 작성해주세요.`,
+
+                product_desc: `당신은 상품 상세페이지 카피라이터입니다.
+아래 1위 상품에 대한 상세 설명을 작성해주세요.
+
+${dataContext}
+
+[작성 대상]
+1위 상품: ${top5[0]?.keyword} (${top5[0]?.category})
+
+[작성 가이드]
+- 상품의 매력 포인트 3가지
+- 왜 일본에서 사야 하는지 (가격, 품질, 한정판 등)
+- 어떤 분께 추천하는지
+- 비드바이로 구매하면 좋은 점
+- 200~300자
+- 구매욕 자극하는 톤
+
+상품 설명 전문을 작성해주세요.`,
+
+                weekly_insight: `당신은 이커머스 데이터 분석가입니다.
+아래 데이터를 바탕으로 내부 공유용 주간 인사이트를 작성해주세요.
+
+${dataContext}
+
+[작성 가이드]
+- 이번 주 핵심 발견 3가지
+- 전주 대비 변화 분석
+- 카테고리별 동향
+- 다음 주 예측/제안
+- 마케팅 액션 아이템
+- 객관적이고 분석적인 톤
+- 500자 내외
+
+내부 리포트 전문을 작성해주세요.`
+            };
+
+            return prompts[type] || prompts.newsletter;
+        }
+
+        // ============================================
+        // 렌더링 함수들
+        // ============================================
+        function render() {
+            const app = document.getElementById('app');
+            
+            if (!state.isLoggedIn) {
+                app.innerHTML = renderLogin();
+            } else {
+                app.innerHTML = renderDashboard();
+            }
+            
+            attachEvents();
+        }
+
+        function renderLogin() {
+            return `
+            <div class="min-h-screen bg-gradient-to-br from-blue-900 to-slate-900 flex items-center justify-center p-4">
+                <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+                    <div class="bg-gradient-to-r from-blue-600 to-blue-700 p-10 text-center">
+                        <div class="text-3xl font-bold text-white mb-2">BIDBUY</div>
+                        <div class="text-blue-200 text-sm">트렌드 관리 시스템</div>
+                    </div>
+                    <div class="p-8">
+                        <div class="mb-5">
+                            <label class="block text-gray-700 text-sm font-medium mb-2">아이디</label>
+                            <input type="text" id="username" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="admin">
+                        </div>
+                        <div class="mb-5">
+                            <label class="block text-gray-700 text-sm font-medium mb-2">비밀번호</label>
+                            <input type="password" id="password" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="••••••••">
+                        </div>
+                        <div id="loginError" class="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm hidden"></div>
+                        <button id="loginBtn" class="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition">
+                            로그인
+                        </button>
+                        <p class="text-center text-gray-400 text-xs mt-4">ID: admin / PW: admin123</p>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        function renderDashboard() {
+            return `
+            <nav class="bg-white shadow-sm border-b">
+                <div class="max-w-6xl mx-auto px-4 flex justify-between items-center h-14">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xl">📈</span>
+                        <span class="font-bold text-lg">비드바이 트렌드</span>
+                    </div>
+                    <button id="logoutBtn" class="text-gray-500 hover:text-red-600 text-sm">🚪 로그아웃</button>
+                </div>
+            </nav>
+
+            <div class="bg-white border-b">
+                <div class="max-w-6xl mx-auto px-4 flex gap-1">
+                    ${['dashboard', 'data', 'content', 'preview', 'settings'].map(tab => `
+                        <button class="tab-btn px-4 py-3 text-sm border-b-2 ${state.activeTab === tab ? 'border-blue-600 text-blue-600 font-semibold' : 'border-transparent text-gray-500'}" data-tab="${tab}">
+                            ${{dashboard: '📊 대시보드', data: '⚙️ 데이터', content: '✍️ AI 콘텐츠', preview: '👁️ 위젯', settings: '🔑 설정'}[tab]}
+                        </button>
+                    `).join('')}
+                </div>
+            </div>
+
+            <div class="max-w-6xl mx-auto px-4 py-6">
+                ${state.activeTab === 'dashboard' ? renderDashboardTab() : ''}
+                ${state.activeTab === 'data' ? renderDataTab() : ''}
+                ${state.activeTab === 'content' ? renderContentTab() : ''}
+                ${state.activeTab === 'preview' ? renderPreviewTab() : ''}
+                ${state.activeTab === 'settings' ? renderSettingsTab() : ''}
+            </div>`;
+        }
+
+        function renderDashboardTab() {
+            const totalSearches = state.trendData.reduce((s, d) => s + d.searches, 0);
+            return `
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-white rounded-xl p-5 shadow-sm">
+                    <div class="text-gray-500 text-sm">총 키워드</div>
+                    <div class="text-3xl font-bold mt-1">${state.trendData.length}</div>
+                </div>
+                <div class="bg-white rounded-xl p-5 shadow-sm">
+                    <div class="text-gray-500 text-sm">총 검색량</div>
+                    <div class="text-3xl font-bold text-blue-600 mt-1">${totalSearches.toLocaleString()}</div>
+                </div>
+                <div class="bg-white rounded-xl p-5 shadow-sm">
+                    <div class="text-gray-500 text-sm">현재 기간</div>
+                    <div class="text-3xl font-bold mt-1">${state.weekInfo.month}월 ${state.weekInfo.week}주차</div>
+                </div>
+                <div class="md:col-span-3 bg-white rounded-xl p-5 shadow-sm">
+                    <h3 class="font-bold mb-4">🔥 TOP 5 키워드</h3>
+                    ${state.trendData.slice(0, 5).map((item, i) => `
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-7 h-7 rounded-full ${i < 3 ? 'bg-red-500' : 'bg-blue-500'} text-white flex items-center justify-center text-xs font-bold">${item.rank}</div>
+                            <div class="flex-1">
+                                <div class="flex justify-between text-sm mb-1">
+                                    <span class="font-medium">${item.keyword}</span>
+                                    <span class="text-gray-400">${item.searches.toLocaleString()}</span>
+                                </div>
+                                <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
+                                    <div class="h-full ${i < 3 ? 'bg-red-500' : 'bg-blue-500'} rounded-full" style="width: ${(item.searches / state.trendData[0].searches) * 100}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>`;
+        }
+
+        function renderDataTab() {
+            return `
+            <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                <div class="p-4 bg-gray-50 border-b flex flex-wrap gap-3 items-center">
+                    <span class="text-gray-600 text-sm">기간:</span>
+                    <select id="monthSelect" class="px-3 py-2 border rounded-lg text-sm">
+                        ${[...Array(12)].map((_, i) => `<option value="${i+1}" ${state.weekInfo.month == i+1 ? 'selected' : ''}>${i+1}월</option>`).join('')}
+                    </select>
+                    <select id="weekSelect" class="px-3 py-2 border rounded-lg text-sm">
+                        ${[1,2,3,4,5].map(w => `<option value="${w}" ${state.weekInfo.week == w ? 'selected' : ''}>${w}주차</option>`).join('')}
+                    </select>
+                    <div class="flex-1"></div>
+                    <button id="addItemBtn" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">+ 추가</button>
+                    <button id="exportBtn" class="px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700">📥 내보내기</button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-50 border-b">
+                            <tr>
+                                <th class="px-4 py-3 text-left font-medium text-gray-600">순위</th>
+                                <th class="px-4 py-3 text-left font-medium text-gray-600">키워드</th>
+                                <th class="px-4 py-3 text-left font-medium text-gray-600">카테고리</th>
+                                <th class="px-4 py-3 text-left font-medium text-gray-600">검색량</th>
+                                <th class="px-4 py-3 text-left font-medium text-gray-600">변화</th>
+                                <th class="px-4 py-3 text-left font-medium text-gray-600">가격(엔)</th>
+                                <th class="px-4 py-3 text-center font-medium text-gray-600">작업</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${state.trendData.map(item => `
+                                <tr class="border-b hover:bg-gray-50" data-id="${item.id}">
+                                    <td class="px-4 py-3"><span class="inline-flex items-center justify-center w-6 h-6 rounded-full ${item.rank <= 3 ? 'bg-red-500' : 'bg-blue-500'} text-white text-xs font-bold">${item.rank}</span></td>
+                                    <td class="px-4 py-3 font-medium">${item.keyword}</td>
+                                    <td class="px-4 py-3 text-gray-500">${item.category}</td>
+                                    <td class="px-4 py-3 text-blue-600 font-medium">${item.searches.toLocaleString()}</td>
+                                    <td class="px-4 py-3"><span class="${item.change >= 0 ? 'text-red-500' : 'text-green-500'}">${item.change >= 0 ? '↑' : '↓'}${Math.abs(item.change)}%</span></td>
+                                    <td class="px-4 py-3 text-gray-500">${item.price?.toLocaleString() || '-'}</td>
+                                    <td class="px-4 py-3 text-center">
+                                        <button class="edit-btn px-2 py-1 bg-blue-100 text-blue-600 rounded text-xs mr-1" data-id="${item.id}">수정</button>
+                                        <button class="delete-btn px-2 py-1 bg-red-100 text-red-600 rounded text-xs" data-id="${item.id}">삭제</button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>`;
+        }
+
+        function renderContentTab() {
+            return `
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-white rounded-xl p-6 shadow-sm">
+                    <h3 class="font-bold text-lg mb-4">🤖 AI 콘텐츠 생성 (Gemini)</h3>
+                    
+                    ${!state.geminiApiKey ? `
+                        <div class="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                            <p class="text-yellow-800 text-sm">⚠️ Gemini API 키가 설정되지 않았습니다. <button class="underline font-medium" onclick="state.activeTab='settings';render();">설정</button>에서 API 키를 입력해주세요.</p>
+                        </div>
+                    ` : ''}
+                    
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">콘텐츠 유형</label>
+                        <select id="contentType" class="w-full px-4 py-3 border rounded-lg">
+                            <option value="newsletter" ${state.selectedContentType === 'newsletter' ? 'selected' : ''}>📧 뉴스레터 본문</option>
+                            <option value="blog" ${state.selectedContentType === 'blog' ? 'selected' : ''}>📝 블로그 포스트</option>
+                            <option value="sns" ${state.selectedContentType === 'sns' ? 'selected' : ''}>📱 SNS 포스트</option>
+                            <option value="product_desc" ${state.selectedContentType === 'product_desc' ? 'selected' : ''}>🏷️ 상품 설명</option>
+                            <option value="weekly_insight" ${state.selectedContentType === 'weekly_insight' ? 'selected' : ''}>📊 주간 인사이트</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-4 p-3 bg-blue-50 rounded-lg text-sm text-blue-800">
+                        💡 현재 ${state.trendData.length}개 키워드, ${state.weekInfo.month}월 ${state.weekInfo.week}주차 데이터 기반으로 생성됩니다.
+                    </div>
+                    
+                    <button id="generateBtn" class="w-full py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg font-medium hover:from-purple-700 hover:to-indigo-700 disabled:opacity-50" ${!state.geminiApiKey ? 'disabled' : ''}>
+                        ${state.isGenerating ? '<span class="loading">⏳ 생성 중...</span>' : '✨ AI 콘텐츠 생성'}
+                    </button>
+                    
+                    <div class="mt-6 pt-6 border-t">
+                        <h4 class="font-medium text-sm mb-3">콘텐츠 유형 설명</h4>
+                        <div class="text-xs text-gray-600 space-y-2">
+                            <p>📧 <b>뉴스레터</b>: 친근한 톤, 구매 유도 포함</p>
+                            <p>📝 <b>블로그</b>: SEO 최적화, 상세 분석</p>
+                            <p>📱 <b>SNS</b>: 짧고 임팩트, 해시태그 포함</p>
+                            <p>🏷️ <b>상품 설명</b>: 1위 상품 상세 카피</p>
+                            <p>📊 <b>인사이트</b>: 내부 공유용 분석</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-xl p-6 shadow-sm">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold text-lg">📝 생성된 콘텐츠</h3>
+                        ${state.generatedContent ? `<button id="copyContentBtn" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm">📋 복사</button>` : ''}
+                    </div>
+                    <div class="bg-gray-900 rounded-lg p-4 min-h-[400px] max-h-[500px] overflow-auto">
+                        <pre class="text-sm text-gray-100 whitespace-pre-wrap font-sans leading-relaxed">${state.generatedContent || '왼쪽에서 콘텐츠 유형 선택 후\n"AI 콘텐츠 생성" 버튼을 클릭하세요.'}</pre>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        function renderPreviewTab() {
+            const top3 = state.trendData.slice(0, 3);
+            return `
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-white rounded-xl p-6 shadow-sm">
+                    <h3 class="font-bold mb-4">📱 위젯 미리보기</h3>
+                    <div class="border rounded-lg p-6 bg-gray-50">
+                        <div class="max-w-xs mx-auto bg-white rounded-lg shadow p-4">
+                            <h3 class="text-center text-lg mb-1">비드바이<span class="text-blue-500 font-bold">트렌드</span></h3>
+                            <p class="text-center text-gray-400 text-sm mb-4">${state.weekInfo.month}월 ${state.weekInfo.week}주차</p>
+                            ${top3.map(item => `
+                                <div class="flex items-center gap-3 py-3 border-b last:border-0">
+                                    <div class="w-9 h-9 rounded-full ${item.rank <= 3 ? 'bg-red-500' : 'bg-blue-500'} text-white flex items-center justify-center font-bold text-sm">${item.rank}</div>
+                                    <div class="flex-1">
+                                        <div class="font-medium text-sm">${item.keyword}</div>
+                                        <div class="text-xs text-gray-400">${item.category} | 🔍${item.searches} <span class="text-red-500">↑${item.change}%</span></div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                            <button class="w-full mt-3 py-2 border rounded text-gray-500 text-sm">더보기 →</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl p-6 shadow-sm">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold">💻 HTML 코드</h3>
+                        <button id="copyWidgetBtn" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm">📋 복사</button>
+                    </div>
+                    <pre id="widgetCode" class="bg-gray-900 text-green-400 p-4 rounded-lg overflow-auto text-xs max-h-80">${generateWidgetHTML()}</pre>
+                </div>
+            </div>`;
+        }
+
+        function renderSettingsTab() {
+            return `
+            <div class="max-w-xl mx-auto">
+                <div class="bg-white rounded-xl p-6 shadow-sm">
+                    <h3 class="font-bold text-lg mb-6">🔑 API 설정</h3>
+                    
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Gemini API 키</label>
+                        <input type="password" id="apiKeyInput" value="${state.geminiApiKey}" class="w-full px-4 py-3 border rounded-lg" placeholder="AIzaSy...">
+                        <p class="mt-2 text-xs text-gray-500">
+                            <a href="https://makersuite.google.com/app/apikey" target="_blank" class="text-blue-600 underline">Google AI Studio</a>에서 무료로 발급받을 수 있습니다.
+                        </p>
+                    </div>
+                    
+                    <button id="saveApiKeyBtn" class="w-full py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700">
+                        저장
+                    </button>
+                    
+                    <div class="mt-6 pt-6 border-t">
+                        <h4 class="font-medium mb-3">📋 데이터 관리</h4>
+                        <div class="flex gap-3">
+                            <button id="exportDataBtn" class="flex-1 py-2 border rounded-lg text-sm hover:bg-gray-50">📥 JSON 내보내기</button>
+                            <label class="flex-1 py-2 border rounded-lg text-sm hover:bg-gray-50 cursor-pointer text-center">
+                                📤 JSON 가져오기
+                                <input type="file" id="importDataInput" accept=".json" class="hidden">
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        function generateWidgetHTML() {
+            const top3 = state.trendData.slice(0, 3);
+            return `&lt;!-- 비드바이 트렌드 위젯 --&gt;
+&lt;div style="max-width:400px;font-family:'Malgun Gothic',sans-serif"&gt;
+  &lt;h3 style="text-align:center;font-size:18px"&gt;
+    비드바이&lt;span style="color:#2196F3;font-weight:bold"&gt;트렌드&lt;/span&gt;
+    &lt;span style="display:block;font-size:14px;color:#888"&gt;${state.weekInfo.month}월 ${state.weekInfo.week}주차&lt;/span&gt;
+  &lt;/h3&gt;
+${top3.map(item => `  &lt;div style="display:flex;gap:15px;padding:15px 0;border-bottom:1px solid #f0f0f0"&gt;
+    &lt;div style="width:40px;height:40px;background:#e74c3c;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold"&gt;${item.rank}&lt;/div&gt;
+    &lt;div&gt;
+      &lt;div style="font-size:14px;font-weight:500"&gt;${item.keyword}&lt;/div&gt;
+      &lt;div style="font-size:12px;color:#888"&gt;${item.category} | 🔍${item.searches}건 &lt;span style="color:#e74c3c"&gt;↑${item.change}%&lt;/span&gt;&lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;`).join('\n')}
+&lt;/div&gt;`;
+        }
+
+        // ============================================
+        // 이벤트 핸들러
+        // ============================================
+        function attachEvents() {
+            // 로그인
+            document.getElementById('loginBtn')?.addEventListener('click', () => {
+                const username = document.getElementById('username').value;
+                const password = document.getElementById('password').value;
+                if (username === 'admin' && password === 'admin123') {
+                    state.isLoggedIn = true;
+                    render();
+                } else {
+                    document.getElementById('loginError').textContent = '아이디 또는 비밀번호가 올바르지 않습니다.';
+                    document.getElementById('loginError').classList.remove('hidden');
+                }
+            });
+
+            // 로그아웃
+            document.getElementById('logoutBtn')?.addEventListener('click', () => {
+                state.isLoggedIn = false;
+                render();
+            });
+
+            // 탭 전환
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    state.activeTab = btn.dataset.tab;
+                    render();
+                });
+            });
+
+            // 기간 변경
+            document.getElementById('monthSelect')?.addEventListener('change', (e) => {
+                state.weekInfo.month = e.target.value;
+                render();
+            });
+            document.getElementById('weekSelect')?.addEventListener('change', (e) => {
+                state.weekInfo.week = e.target.value;
+                render();
+            });
+
+            // 항목 추가
+            document.getElementById('addItemBtn')?.addEventListener('click', () => {
+                const newId = Math.max(...state.trendData.map(d => d.id), 0) + 1;
+                const keyword = prompt('키워드를 입력하세요:');
+                if (keyword) {
+                    state.trendData.push({
+                        id: newId,
+                        rank: state.trendData.length + 1,
+                        keyword: keyword,
+                        category: prompt('카테고리:') || '기타',
+                        searches: parseInt(prompt('검색량:')) || 0,
+                        change: parseInt(prompt('변화율(%):')) || 0,
+                        price: parseInt(prompt('가격(엔):')) || 0
+                    });
+                    render();
+                }
+            });
+
+            // 항목 수정
+            document.querySelectorAll('.edit-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const id = parseInt(btn.dataset.id);
+                    const item = state.trendData.find(d => d.id === id);
+                    if (item) {
+                        item.keyword = prompt('키워드:', item.keyword) || item.keyword;
+                        item.category = prompt('카테고리:', item.category) || item.category;
+                        item.searches = parseInt(prompt('검색량:', item.searches)) || item.searches;
+                        item.change = parseInt(prompt('변화율(%):', item.change)) ?? item.change;
+                        item.price = parseInt(prompt('가격(엔):', item.price)) || item.price;
+                        render();
+                    }
+                });
+            });
+
+            // 항목 삭제
+            document.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    if (confirm('정말 삭제하시겠습니까?')) {
+                        const id = parseInt(btn.dataset.id);
+                        state.trendData = state.trendData.filter(d => d.id !== id);
+                        state.trendData.forEach((d, i) => d.rank = i + 1);
+                        render();
+                    }
+                });
+            });
+
+            // 콘텐츠 유형 변경
+            document.getElementById('contentType')?.addEventListener('change', (e) => {
+                state.selectedContentType = e.target.value;
+            });
+
+            // AI 콘텐츠 생성
+            document.getElementById('generateBtn')?.addEventListener('click', async () => {
+                state.isGenerating = true;
+                render();
+                
+                try {
+                    const prompt = buildPrompt(state.selectedContentType);
+                    const content = await generateWithGemini(prompt);
+                    state.generatedContent = content || '생성에 실패했습니다.';
+                } catch (error) {
+                    state.generatedContent = '오류: ' + error.message;
+                }
+                
+                state.isGenerating = false;
+                render();
+            });
+
+            // 콘텐츠 복사
+            document.getElementById('copyContentBtn')?.addEventListener('click', () => {
+                navigator.clipboard.writeText(state.generatedContent);
+                alert('복사되었습니다!');
+            });
+
+            // 위젯 코드 복사
+            document.getElementById('copyWidgetBtn')?.addEventListener('click', () => {
+                const code = document.getElementById('widgetCode').textContent
+                    .replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+                navigator.clipboard.writeText(code);
+                alert('복사되었습니다!');
+            });
+
+            // API 키 저장
+            document.getElementById('saveApiKeyBtn')?.addEventListener('click', () => {
+                state.geminiApiKey = document.getElementById('apiKeyInput').value;
+                localStorage.setItem('gemini_api_key', state.geminiApiKey);
+                alert('저장되었습니다!');
+                render();
+            });
+
+            // 데이터 내보내기
+            document.getElementById('exportDataBtn')?.addEventListener('click', () => {
+                const data = JSON.stringify({ weekInfo: state.weekInfo, trendData: state.trendData }, null, 2);
+                const blob = new Blob([data], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `bidbuy_trend_${state.weekInfo.month}월${state.weekInfo.week}주차.json`;
+                a.click();
+            });
+            
+            document.getElementById('exportBtn')?.addEventListener('click', () => {
+                const data = JSON.stringify({ weekInfo: state.weekInfo, trendData: state.trendData }, null, 2);
+                const blob = new Blob([data], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `bidbuy_trend_${state.weekInfo.month}월${state.weekInfo.week}주차.json`;
+                a.click();
+            });
+
+            // 데이터 가져오기
+            document.getElementById('importDataInput')?.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const data = JSON.parse(e.target.result);
+                            if (data.trendData) state.trendData = data.trendData;
+                            if (data.weekInfo) state.weekInfo = data.weekInfo;
+                            alert('데이터를 가져왔습니다!');
+                            render();
+                        } catch (err) {
+                            alert('잘못된 파일 형식입니다.');
+                        }
+                    };
+                    reader.readAsText(file);
+                }
+            });
+        }
+
+        // 초기 렌더링
+        render();
+    </script>
+</body>
+</html>

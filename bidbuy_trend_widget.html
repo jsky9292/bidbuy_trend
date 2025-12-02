@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>비드바이 트렌드</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Malgun Gothic', '맑은 고딕', sans-serif;
+            background: #fff;
+            color: #333;
+        }
+        
+        /* 메인 컨테이너 */
+        .bidbuy-trend-section {
+            max-width: 400px;
+            padding: 20px;
+            background: #fff;
+        }
+        
+        /* 섹션 타이틀 - 기존 "비드바이특파원" 스타일 매칭 */
+        .section-title {
+            text-align: center;
+            font-size: 18px;
+            font-weight: normal;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        .section-title .highlight {
+            color: #2196F3;
+            font-weight: bold;
+        }
+        .section-title .week {
+            font-size: 14px;
+            color: #888;
+            display: block;
+            margin-top: 5px;
+        }
+        
+        /* 트렌드 카드 리스트 */
+        .trend-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        /* 개별 트렌드 카드 - 기존 특파원 카드 스타일 매칭 */
+        .trend-card {
+            display: flex;
+            gap: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .trend-card:hover {
+            background: #fafafa;
+        }
+        .trend-card:last-child {
+            border-bottom: none;
+        }
+        
+        /* 썸네일 */
+        .trend-thumb {
+            width: 80px;
+            height: 80px;
+            border-radius: 4px;
+            overflow: hidden;
+            flex-shrink: 0;
+            background: #f5f5f5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .trend-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        /* 이미지 없을 때 순위 표시 */
+        .trend-thumb .rank {
+            font-size: 28px;
+            font-weight: bold;
+            color: #2196F3;
+        }
+        .trend-thumb .rank.top3 {
+            color: #e74c3c;
+        }
+        
+        /* 카드 콘텐츠 */
+        .trend-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .trend-title {
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 5px;
+            line-height: 1.4;
+        }
+        .trend-meta {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 8px;
+        }
+        .trend-stats {
+            display: flex;
+            gap: 10px;
+            font-size: 12px;
+        }
+        .trend-stats .searches {
+            color: #2196F3;
+            font-weight: 500;
+        }
+        .trend-stats .change {
+            color: #e74c3c;
+            font-weight: 500;
+        }
+        .trend-stats .change.down {
+            color: #27ae60;
+        }
+        
+        /* 더보기 버튼 */
+        .more-btn {
+            display: block;
+            text-align: center;
+            padding: 12px;
+            margin-top: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            color: #666;
+            text-decoration: none;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+        .more-btn:hover {
+            border-color: #2196F3;
+            color: #2196F3;
+        }
+        
+        /* ========================================= */
+        /* 풀 위젯 버전 (더 넓은 공간용) */
+        /* ========================================= */
+        .bidbuy-trend-widget {
+            max-width: 100%;
+            padding: 30px;
+            background: #fff;
+            border: 1px solid #eee;
+            border-radius: 8px;
+        }
+        
+        .widget-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #2196F3;
+        }
+        .widget-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+        }
+        .widget-title .blue {
+            color: #2196F3;
+        }
+        .widget-date {
+            font-size: 14px;
+            color: #888;
+        }
+        
+        /* 그리드 레이아웃 (넓은 버전) */
+        .trend-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+        
+        .trend-grid-card {
+            display: flex;
+            gap: 15px;
+            padding: 15px;
+            background: #fafafa;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+        .trend-grid-card:hover {
+            background: #f0f7ff;
+            transform: translateY(-2px);
+        }
+        
+        .grid-rank {
+            width: 40px;
+            height: 40px;
+            background: #2196F3;
+            color: #fff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+        .grid-rank.top3 {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+        }
+        
+        .grid-info {
+            flex: 1;
+        }
+        .grid-keyword {
+            font-size: 15px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        .grid-category {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 8px;
+        }
+        .grid-stats {
+            font-size: 13px;
+            color: #2196F3;
+        }
+    </style>
+</head>
+<body>
+
+<!-- ============================================ -->
+<!-- 버전 1: 사이드바용 (기존 특파원 자리 대체) -->
+<!-- ============================================ -->
+<div style="padding: 40px; background: #f5f5f5;">
+    <h2 style="margin-bottom: 20px; color: #333;">버전 1: 사이드바용 (기존 특파원 위치)</h2>
+    
+    <div class="bidbuy-trend-section">
+        <h3 class="section-title">
+            비드바이<span class="highlight">트렌드</span>
+            <span class="week">11월 4주차</span>
+        </h3>
+        
+        <div class="trend-list">
+            <!-- 1위 -->
+            <div class="trend-card">
+                <div class="trend-thumb">
+                    <span class="rank top3">1</span>
+                </div>
+                <div class="trend-content">
+                    <div class="trend-title">미즈노 글러브</div>
+                    <div class="trend-meta">야구용품 | 2024.11.25</div>
+                    <div class="trend-stats">
+                        <span class="searches">🔍 347건</span>
+                        <span class="change">↑ 23%</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 2위 -->
+            <div class="trend-card">
+                <div class="trend-thumb">
+                    <span class="rank top3">2</span>
+                </div>
+                <div class="trend-content">
+                    <div class="trend-title">원피스 피규어</div>
+                    <div class="trend-meta">피규어 | 2024.11.25</div>
+                    <div class="trend-stats">
+                        <span class="searches">🔍 282건</span>
+                        <span class="change">↑ 45%</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 3위 -->
+            <div class="trend-card">
+                <div class="trend-thumb">
+                    <span class="rank top3">3</span>
+                </div>
+                <div class="trend-content">
+                    <div class="trend-title">아식스 배트</div>
+                    <div class="trend-meta">야구용품 | 2024.11.25</div>
+                    <div class="trend-stats">
+                        <span class="searches">🔍 269건</span>
+                        <span class="change">↑ 12%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <a href="#" class="more-btn">트렌드 더보기 →</a>
+    </div>
+</div>
+
+
+<!-- ============================================ -->
+<!-- 버전 2: 풀 위젯 (메인 영역용) -->
+<!-- ============================================ -->
+<div style="padding: 40px; background: #fff;">
+    <h2 style="margin-bottom: 20px; color: #333;">버전 2: 메인 영역용 (넓은 버전)</h2>
+    
+    <div class="bidbuy-trend-widget">
+        <div class="widget-header">
+            <h3 class="widget-title">
+                비드바이 <span class="blue">트렌드</span>
+            </h3>
+            <span class="widget-date">📅 11월 4주차 (11.18 ~ 11.24)</span>
+        </div>
+        
+        <div class="trend-grid">
+            <!-- 1위 -->
+            <div class="trend-grid-card">
+                <div class="grid-rank top3">1</div>
+                <div class="grid-info">
+                    <div class="grid-keyword">미즈노 글러브</div>
+                    <div class="grid-category">야구용품</div>
+                    <div class="grid-stats">🔍 347건 · ↑23%</div>
+                </div>
+            </div>
+            
+            <!-- 2위 -->
+            <div class="trend-grid-card">
+                <div class="grid-rank top3">2</div>
+                <div class="grid-info">
+                    <div class="grid-keyword">원피스 피규어</div>
+                    <div class="grid-category">피규어</div>
+                    <div class="grid-stats">🔍 282건 · ↑45%</div>
+                </div>
+            </div>
+            
+            <!-- 3위 -->
+            <div class="trend-grid-card">
+                <div class="grid-rank top3">3</div>
+                <div class="grid-info">
+                    <div class="grid-keyword">아식스 배트</div>
+                    <div class="grid-category">야구용품</div>
+                    <div class="grid-stats">🔍 269건 · ↑12%</div>
+                </div>
+            </div>
+            
+            <!-- 4위 -->
+            <div class="trend-grid-card">
+                <div class="grid-rank">4</div>
+                <div class="grid-info">
+                    <div class="grid-keyword">건담 프라모델</div>
+                    <div class="grid-category">피규어</div>
+                    <div class="grid-stats">🔍 228건 · ↑8%</div>
+                </div>
+            </div>
+            
+            <!-- 5위 -->
+            <div class="trend-grid-card">
+                <div class="grid-rank">5</div>
+                <div class="grid-info">
+                    <div class="grid-keyword">포켓몬 카드</div>
+                    <div class="grid-category">완구</div>
+                    <div class="grid-stats">🔍 217건 · ↑31%</div>
+                </div>
+            </div>
+            
+            <!-- 6위 -->
+            <div class="trend-grid-card">
+                <div class="grid-rank">6</div>
+                <div class="grid-info">
+                    <div class="grid-keyword">시세이도 선크림</div>
+                    <div class="grid-category">뷰티</div>
+                    <div class="grid-stats">🔍 190건 · ↑15%</div>
+                </div>
+            </div>
+        </div>
+        
+        <a href="#" class="more-btn">전체 트렌드 보기 →</a>
+    </div>
+</div>
+
+
+<!-- ============================================ -->
+<!-- 버전 3: 미니 위젯 (작은 공간용) -->
+<!-- ============================================ -->
+<div style="padding: 40px; background: #f5f5f5;">
+    <h2 style="margin-bottom: 20px; color: #333;">버전 3: 미니 위젯</h2>
+    
+    <div style="max-width: 300px; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+        <div style="background: #2196F3; color: #fff; padding: 15px; text-align: center;">
+            <div style="font-size: 16px; font-weight: 600;">비드바이 트렌드</div>
+            <div style="font-size: 12px; opacity: 0.9; margin-top: 3px;">11월 4주차</div>
+        </div>
+        <div style="padding: 15px;">
+            <div style="display: flex; align-items: center; padding: 10px 0; border-bottom: 1px solid #f0f0f0;">
+                <span style="width: 24px; height: 24px; background: #e74c3c; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; margin-right: 10px;">1</span>
+                <span style="flex: 1; font-size: 14px;">미즈노 글러브</span>
+                <span style="font-size: 12px; color: #e74c3c;">↑23%</span>
+            </div>
+            <div style="display: flex; align-items: center; padding: 10px 0; border-bottom: 1px solid #f0f0f0;">
+                <span style="width: 24px; height: 24px; background: #e74c3c; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; margin-right: 10px;">2</span>
+                <span style="flex: 1; font-size: 14px;">원피스 피규어</span>
+                <span style="font-size: 12px; color: #e74c3c;">↑45%</span>
+            </div>
+            <div style="display: flex; align-items: center; padding: 10px 0;">
+                <span style="width: 24px; height: 24px; background: #e74c3c; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; margin-right: 10px;">3</span>
+                <span style="flex: 1; font-size: 14px;">아식스 배트</span>
+                <span style="font-size: 12px; color: #e74c3c;">↑12%</span>
+            </div>
+        </div>
+        <a href="#" style="display: block; text-align: center; padding: 12px; background: #f8f9fa; color: #2196F3; text-decoration: none; font-size: 13px;">더보기 →</a>
+    </div>
+</div>
+
+</body>
+</html>
