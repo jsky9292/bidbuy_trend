@@ -326,26 +326,47 @@
         // ============================================
         async function parseExcel(file) {
             return new Promise((resolve, reject) => {
+                console.log('📁 파일 정보:', {
+                    name: file.name,
+                    size: (file.size / 1024 / 1024).toFixed(2) + 'MB',
+                    type: file.type
+                });
+
                 // XLSX 라이브러리 로드 확인
                 if (typeof XLSX === 'undefined') {
+                    console.error('❌ XLSX 라이브러리 미로드');
                     reject(new Error('엑셀 라이브러리 로딩 중입니다. 잠시 후 다시 시도해주세요.'));
                     return;
                 }
+                console.log('✅ XLSX 라이브러리 로드됨');
 
                 const reader = new FileReader();
 
                 reader.onload = (e) => {
                     try {
+                        console.log('📖 파일 읽기 완료, 파싱 시작...');
                         const data = new Uint8Array(e.target.result);
+                        console.log('📊 데이터 크기:', data.length, 'bytes');
+
                         const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+                        console.log('📗 워크북 시트:', workbook.SheetNames);
 
                         if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
                             reject(new Error('시트를 찾을 수 없습니다.'));
                             return;
                         }
 
-                        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const sheetName = workbook.SheetNames[0];
+                        const sheet = workbook.Sheets[sheetName];
+                        console.log('📄 첫 번째 시트:', sheetName);
+
                         const json = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+                        console.log('✅ 파싱 완료, 행 수:', json.length);
+
+                        if (json.length > 0) {
+                            console.log('📋 컬럼 목록:', Object.keys(json[0]));
+                            console.log('📋 첫 번째 행:', json[0]);
+                        }
 
                         if (!json || json.length === 0) {
                             reject(new Error('데이터가 없습니다.'));
@@ -354,15 +375,24 @@
 
                         resolve(json);
                     } catch (err) {
-                        console.error('Excel parse error:', err);
-                        reject(new Error('파일 형식을 읽을 수 없습니다.'));
+                        console.error('❌ Excel parse error:', err);
+                        reject(new Error('파일 파싱 오류: ' + err.message));
                     }
                 };
 
-                reader.onerror = () => {
+                reader.onerror = (err) => {
+                    console.error('❌ FileReader error:', err);
                     reject(new Error('파일을 읽을 수 없습니다.'));
                 };
 
+                reader.onprogress = (e) => {
+                    if (e.lengthComputable) {
+                        const percent = Math.round((e.loaded / e.total) * 100);
+                        console.log('📥 읽기 진행:', percent + '%');
+                    }
+                };
+
+                console.log('📂 파일 읽기 시작...');
                 reader.readAsArrayBuffer(file);
             });
         }
@@ -608,8 +638,15 @@
                     <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" style="display:none;">
                     <div class="upload-icon">📁</div>
                     <div class="upload-title">엑셀 파일을 드래그하거나 클릭하세요</div>
-                    <div class="upload-desc">지원 형식: .xlsx, .xls, .csv</div>
+                    <div class="upload-desc">지원 형식: .xlsx, .xls, .csv (최대 50MB)</div>
                 </div>
+                <div id="uploadStatus" style="margin-top:16px;display:none;">
+                    <div style="display:flex;align-items:center;gap:12px;padding:16px;background:var(--toss-blue-light);border-radius:12px;">
+                        <div class="spinner" style="width:24px;height:24px;border:3px solid var(--toss-blue);border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;"></div>
+                        <span id="uploadStatusText" style="color:var(--toss-blue);font-weight:600;">업로드 중...</span>
+                    </div>
+                </div>
+                <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
             </div>
 
             ${state.salesData.length > 0 ? `
@@ -1245,40 +1282,83 @@
             });
         }
 
+        function setUploadStatus(show, text = '') {
+            const statusEl = document.getElementById('uploadStatus');
+            const textEl = document.getElementById('uploadStatusText');
+            if (statusEl) {
+                statusEl.style.display = show ? 'block' : 'none';
+                if (textEl && text) textEl.textContent = text;
+            }
+        }
+
         async function handleFileUpload(file) {
+            console.log('🚀 파일 업로드 시작');
+
             // 파일 유효성 검사
             if (!file) {
-                showToast('파일을 선택해주세요');
+                showToast('파일을 선택해주세요', 'error');
                 return;
             }
 
-            const validTypes = [
-                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // xlsx
-                'application/vnd.ms-excel', // xls
-                'text/csv', // csv
-                'application/csv'
-            ];
-            const ext = file.name.split('.').pop().toLowerCase();
+            const fileName = file.name;
+            const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
+            console.log('📁 업로드 파일:', fileName, file.type, fileSizeMB + 'MB');
 
-            if (!validTypes.includes(file.type) && !['xlsx', 'xls', 'csv'].includes(ext)) {
-                showToast('지원하지 않는 파일 형식입니다. (xlsx, xls, csv만 가능)');
+            const ext = fileName.split('.').pop().toLowerCase();
+            console.log('📄 파일 확장자:', ext);
+
+            // 한글 파일명도 정상 처리됨
+            console.log('📝 파일명 (인코딩 확인):', encodeURIComponent(fileName));
+
+            if (!['xlsx', 'xls', 'csv'].includes(ext)) {
+                showToast('지원하지 않는 파일 형식입니다. (xlsx, xls, csv만 가능)', 'error');
                 return;
             }
 
-            if (file.size > 10 * 1024 * 1024) { // 10MB 제한
-                showToast('파일 크기가 너무 큽니다. (최대 10MB)');
+            // 대용량 파일 경고 (50MB로 확대)
+            if (file.size > 50 * 1024 * 1024) {
+                showToast('파일 크기가 너무 큽니다. (최대 50MB)', 'error');
                 return;
             }
+
+            // 진행 상태 표시
+            setUploadStatus(true, `📂 ${fileName} (${fileSizeMB}MB) 분석 중...`);
 
             try {
-                showToast('파일 분석 중...');
+                console.log('⏳ 파싱 시작...');
+                const startTime = Date.now();
+
                 const data = await parseExcel(file);
-                state.salesData = data;
-                saveState();
+
+                const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+                console.log(`✅ 파싱 완료: ${data.length}건, ${elapsed}초 소요`);
+
+                setUploadStatus(false);
+
+                // 대용량 데이터 저장 시 청크 처리 (localStorage 5MB 제한)
+                if (data.length > 30000) {
+                    console.warn('⚠️ 대용량 데이터 - localStorage 한계로 최근 30,000건만 저장');
+                    state.salesData = data.slice(-30000);
+                    showToast(`⚠️ ${data.length}건 중 최근 30,000건만 저장됨 (${elapsed}초)`, 'success');
+                } else {
+                    state.salesData = data;
+                    showToast(`✅ ${data.length}건의 데이터를 불러왔습니다 (${elapsed}초)`, 'success');
+                }
+
+                try {
+                    saveState();
+                } catch (storageErr) {
+                    console.error('❌ localStorage 저장 실패:', storageErr);
+                    // localStorage 용량 초과 시 더 적게 저장
+                    state.salesData = data.slice(-10000);
+                    saveState();
+                    showToast(`⚠️ 저장 공간 부족 - 최근 10,000건만 저장됨`, 'error');
+                }
+
                 render();
-                showToast(`✅ ${data.length}건의 데이터를 불러왔습니다`, 'success');
             } catch (err) {
-                console.error('File upload error:', err);
+                console.error('❌ File upload error:', err);
+                setUploadStatus(false);
                 showToast('오류: ' + err.message, 'error');
             }
         }
