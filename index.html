@@ -2330,8 +2330,8 @@
                     <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
                         <span style="font-size:24px;">⚠️</span>
                         <div>
-                            <p style="font-weight:600;margin:0;color:var(--toss-red);">데이터 전체 초기화</p>
-                            <p style="font-size:13px;color:var(--toss-gray-600);margin:4px 0 0 0;">모든 데이터가 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다.</p>
+                            <p style="font-weight:600;margin:0;color:var(--toss-red);">업로드 데이터 초기화</p>
+                            <p style="font-size:13px;color:var(--toss-gray-600);margin:4px 0 0 0;">업로드된 판매 데이터가 삭제됩니다. API 키는 유지됩니다.</p>
                         </div>
                     </div>
                     <div class="info-box yellow" style="margin-bottom:12px;padding:12px;">
@@ -2339,9 +2339,12 @@
                         • 업로드된 판매 데이터 (${formatNumber(state.salesData.length)}건)<br>
                         • 트렌드 키워드 (${state.trendData.length}개)<br>
                         • 컬럼 매핑 설정<br>
-                        • 생성된 뉴스레터
+                        • 생성된 뉴스레터<br><br>
+                        <strong style="color:var(--toss-green);">✓ 유지되는 항목:</strong><br>
+                        • Gemini API 키<br>
+                        • 스티비 API 설정
                     </div>
-                    <button class="btn btn-danger" id="resetBtn" style="width:100%;">🗑️ 모든 데이터 삭제</button>
+                    <button class="btn btn-danger" id="resetBtn" style="width:100%;">🗑️ 업로드 데이터 삭제</button>
                 </div>
             </div>`;
         }
@@ -3017,51 +3020,38 @@ ${topCategories.join('\n')}
                 e.target.value = '';
             });
 
-            // 전체 초기화
+            // 업로드 데이터 초기화 (API 키는 유지)
             document.getElementById('resetBtn')?.addEventListener('click', async () => {
-                const confirmMsg = `⚠️ 정말로 모든 데이터를 삭제하시겠습니까?\n\n` +
+                const confirmMsg = `⚠️ 업로드된 데이터를 삭제하시겠습니까?\n\n` +
                     `삭제될 항목:\n` +
                     `• 판매 데이터: ${formatNumber(state.salesData.length)}건\n` +
                     `• 트렌드 키워드: ${state.trendData.length}개\n` +
                     `• 컬럼 매핑 설정\n` +
-                    `• 생성된 뉴스레터\n` +
-                    `• API 키 설정\n\n` +
+                    `• 생성된 뉴스레터\n\n` +
+                    `✓ API 키 설정은 유지됩니다.\n\n` +
                     `❌ 이 작업은 되돌릴 수 없습니다!`;
 
                 if (!confirm(confirmMsg)) return;
-
-                // 2차 확인
-                const doubleConfirm = prompt('삭제를 확인하려면 "삭제"를 입력하세요:');
-                if (doubleConfirm !== '삭제') {
-                    showToast('초기화가 취소되었습니다', 'success');
-                    return;
-                }
 
                 try {
                     // IndexedDB 삭제
                     await saveSalesData([]);
 
-                    // LocalStorage 전체 삭제
+                    // 업로드 데이터 관련 LocalStorage만 삭제 (API 키는 유지)
                     localStorage.removeItem('bidbuy_trends');
                     localStorage.removeItem('bidbuy_column_mapping');
                     localStorage.removeItem('bidbuy_newsletters');
-                    localStorage.removeItem('bidbuy_gemini_key');
-                    localStorage.removeItem('bidbuy_stibee_key');
-                    localStorage.removeItem('bidbuy_stibee_list');
 
-                    // State 초기화
+                    // State 초기화 (API 키는 유지)
                     state.salesData = [];
                     state.trendData = [];
                     state.newsletters = [];
                     state.newsletterHtml = '';
                     state.generatedContent = '';
-                    state.geminiApiKey = '';
-                    state.stibeeApiKey = '';
-                    state.stibeeListId = '';
                     columnMapping = { product: null, category: null, sales: null, site: null, date: null, category1: null, category2: null, category3: null, category4: null };
                     selectedMonth = null;
 
-                    showToast('✅ 모든 데이터가 삭제되었습니다', 'success');
+                    showToast('✅ 업로드 데이터가 삭제되었습니다 (API 키는 유지)', 'success');
                     window._analyzedOnce = false;
                     render();
                 } catch (err) {
