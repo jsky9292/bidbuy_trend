@@ -314,7 +314,7 @@
         // IndexedDB 저장소 (대용량 데이터용)
         // ============================================
         const DB_NAME = 'BidBuyAnalytics';
-        const DB_VERSION = 1;
+        const DB_VERSION = 2; // 버전 업그레이드
         let db = null;
 
         async function initDB() {
@@ -322,59 +322,120 @@
                 const request = indexedDB.open(DB_NAME, DB_VERSION);
 
                 request.onerror = () => {
-                    console.error('❌ IndexedDB 열기 실패');
+                    console.error('❌ IndexedDB 열기 실패:', request.error);
                     reject(request.error);
                 };
 
                 request.onsuccess = () => {
                     db = request.result;
-                    console.log('✅ IndexedDB 연결됨');
+                    console.log('✅ IndexedDB 연결됨 (v' + DB_VERSION + ')');
                     resolve(db);
                 };
 
                 request.onupgradeneeded = (e) => {
                     const database = e.target.result;
-                    // 판매 데이터 저장소 생성
-                    if (!database.objectStoreNames.contains('salesData')) {
-                        database.createObjectStore('salesData', { keyPath: 'id', autoIncrement: true });
+                    console.log('🔄 IndexedDB 업그레이드 중... v' + e.oldVersion + ' → v' + DB_VERSION);
+
+                    // 기존 스토어 삭제 후 재생성
+                    if (database.objectStoreNames.contains('salesData')) {
+                        database.deleteObjectStore('salesData');
                     }
-                    // 메타데이터 저장소
-                    if (!database.objectStoreNames.contains('metadata')) {
-                        database.createObjectStore('metadata', { keyPath: 'key' });
+                    if (database.objectStoreNames.contains('metadata')) {
+                        database.deleteObjectStore('metadata');
                     }
-                    console.log('📦 IndexedDB 스토어 생성됨');
+
+                    // 새 스토어 생성 (autoIncrement 사용)
+                    database.createObjectStore('salesData', { autoIncrement: true });
+                    database.createObjectStore('metadata', { keyPath: 'key' });
+
+                    console.log('📦 IndexedDB 스토어 재생성됨');
                 };
             });
         }
 
-        // 판매 데이터 저장 (IndexedDB)
+        // IndexedDB 완전 삭제 (문제 해결용)
+        async function resetDB() {
+            return new Promise((resolve, reject) => {
+                if (db) db.close();
+                const request = indexedDB.deleteDatabase(DB_NAME);
+                request.onsuccess = () => {
+                    console.log('🗑️ IndexedDB 완전 삭제됨');
+                    db = null;
+                    resolve();
+                };
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        // 판매 데이터 저장 (IndexedDB) - 청크 단위 저장
         async function saveSalesData(data) {
             if (!db) await initDB();
 
-            return new Promise((resolve, reject) => {
+            if (!data || data.length === 0) {
+                // 빈 데이터 저장 (삭제)
+                const transaction = db.transaction(['salesData'], 'readwrite');
+                transaction.objectStore('salesData').clear();
+                return;
+            }
+
+            const CHUNK_SIZE = 1000; // 1000건씩 저장 (더 안정적)
+            const totalChunks = Math.ceil(data.length / CHUNK_SIZE);
+
+            console.log(`📦 총 ${formatNumber(data.length)}건을 ${totalChunks}개 청크로 저장 시작...`);
+
+            // 먼저 기존 데이터 삭제
+            await new Promise((resolve, reject) => {
                 const transaction = db.transaction(['salesData'], 'readwrite');
                 const store = transaction.objectStore('salesData');
-
-                // 기존 데이터 삭제
-                store.clear();
-
-                // 새 데이터 저장
-                data.forEach((item, index) => {
-                    store.add({ ...item, id: index });
-                });
-
-                transaction.oncomplete = () => {
-                    console.log(`✅ IndexedDB에 ${data.length}건 저장 완료`);
-                    // 메타데이터도 저장
-                    saveMetadata('salesCount', data.length);
+                const clearRequest = store.clear();
+                clearRequest.onsuccess = () => {
+                    console.log('🗑️ 기존 데이터 삭제 완료');
                     resolve();
                 };
-
-                transaction.onerror = () => {
-                    console.error('❌ IndexedDB 저장 실패:', transaction.error);
-                    reject(transaction.error);
+                clearRequest.onerror = (e) => {
+                    console.error('삭제 실패:', e);
+                    reject(e);
                 };
             });
+
+            // 청크 단위로 저장
+            let savedCount = 0;
+            for (let i = 0; i < totalChunks; i++) {
+                const start = i * CHUNK_SIZE;
+                const end = Math.min(start + CHUNK_SIZE, data.length);
+                const chunk = data.slice(start, end);
+
+                await new Promise((resolve, reject) => {
+                    const transaction = db.transaction(['salesData'], 'readwrite');
+                    const store = transaction.objectStore('salesData');
+
+                    let addedCount = 0;
+                    chunk.forEach((item) => {
+                        const request = store.add(item);
+                        request.onsuccess = () => addedCount++;
+                        request.onerror = (e) => console.warn('항목 추가 실패:', e.target.error);
+                    });
+
+                    transaction.oncomplete = () => {
+                        savedCount += addedCount;
+                        const progress = Math.round((savedCount / data.length) * 100);
+                        if (i % 5 === 0 || i === totalChunks - 1) {
+                            console.log(`📊 저장 진행: ${progress}% (${formatNumber(savedCount)}/${formatNumber(data.length)}건)`);
+                        }
+                        resolve();
+                    };
+
+                    transaction.onerror = (e) => {
+                        console.error(`❌ 청크 ${i + 1} 저장 실패:`, e.target.error);
+                        // 에러가 나도 계속 진행
+                        resolve();
+                    };
+                });
+            }
+
+            console.log(`✅ IndexedDB에 ${formatNumber(savedCount)}건 저장 완료`);
+            await saveMetadata('salesCount', savedCount);
+            return savedCount;
         }
 
         // 판매 데이터 불러오기 (IndexedDB)
