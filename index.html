@@ -255,7 +255,7 @@
         const state = {
             isLoggedIn: localStorage.getItem('bidbuy_logged_in') === 'true',
             currentPage: 'dashboard',
-            salesData: JSON.parse(localStorage.getItem('bidbuy_sales') || '[]'),
+            salesData: [], // IndexedDB에서 로드
             trendData: JSON.parse(localStorage.getItem('bidbuy_trends') || '[]'),
             newsletters: JSON.parse(localStorage.getItem('bidbuy_newsletters') || '[]'),
             subscribers: JSON.parse(localStorage.getItem('bidbuy_subscribers') || '[]'),
@@ -264,7 +264,8 @@
             isGenerating: false,
             generatedContent: '',
             weekInfo: { month: new Date().getMonth() + 1, week: Math.ceil(new Date().getDate() / 7) },
-            charts: {}
+            charts: {},
+            isLoading: true // 데이터 로딩 중 표시
         };
 
         // 샘플 데이터 초기화
@@ -276,7 +277,6 @@
                 { id: 4, keyword: '건담 프라모델', category: '피규어', searches: 228, change: 8, price: 4500 },
                 { id: 5, keyword: '포켓몬 카드', category: '완구', searches: 217, change: 31, price: 3000 },
             ];
-            saveState();
         }
 
         if (state.subscribers.length === 0) {
@@ -284,7 +284,6 @@
                 { id: 1, email: 'user1@example.com', name: '김철수', subscribed: true, createdAt: '2025-11-01' },
                 { id: 2, email: 'user2@example.com', name: '이영희', subscribed: true, createdAt: '2025-11-15' },
             ];
-            saveState();
         }
 
         // ============================================
@@ -311,11 +310,124 @@
             return new Intl.NumberFormat('ko-KR').format(n || 0) + '원';
         }
 
+        // ============================================
+        // IndexedDB 저장소 (대용량 데이터용)
+        // ============================================
+        const DB_NAME = 'BidBuyAnalytics';
+        const DB_VERSION = 1;
+        let db = null;
+
+        async function initDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+                request.onerror = () => {
+                    console.error('❌ IndexedDB 열기 실패');
+                    reject(request.error);
+                };
+
+                request.onsuccess = () => {
+                    db = request.result;
+                    console.log('✅ IndexedDB 연결됨');
+                    resolve(db);
+                };
+
+                request.onupgradeneeded = (e) => {
+                    const database = e.target.result;
+                    // 판매 데이터 저장소 생성
+                    if (!database.objectStoreNames.contains('salesData')) {
+                        database.createObjectStore('salesData', { keyPath: 'id', autoIncrement: true });
+                    }
+                    // 메타데이터 저장소
+                    if (!database.objectStoreNames.contains('metadata')) {
+                        database.createObjectStore('metadata', { keyPath: 'key' });
+                    }
+                    console.log('📦 IndexedDB 스토어 생성됨');
+                };
+            });
+        }
+
+        // 판매 데이터 저장 (IndexedDB)
+        async function saveSalesData(data) {
+            if (!db) await initDB();
+
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(['salesData'], 'readwrite');
+                const store = transaction.objectStore('salesData');
+
+                // 기존 데이터 삭제
+                store.clear();
+
+                // 새 데이터 저장
+                data.forEach((item, index) => {
+                    store.add({ ...item, id: index });
+                });
+
+                transaction.oncomplete = () => {
+                    console.log(`✅ IndexedDB에 ${data.length}건 저장 완료`);
+                    // 메타데이터도 저장
+                    saveMetadata('salesCount', data.length);
+                    resolve();
+                };
+
+                transaction.onerror = () => {
+                    console.error('❌ IndexedDB 저장 실패:', transaction.error);
+                    reject(transaction.error);
+                };
+            });
+        }
+
+        // 판매 데이터 불러오기 (IndexedDB)
+        async function loadSalesData() {
+            if (!db) await initDB();
+
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(['salesData'], 'readonly');
+                const store = transaction.objectStore('salesData');
+                const request = store.getAll();
+
+                request.onsuccess = () => {
+                    const data = request.result || [];
+                    console.log(`📂 IndexedDB에서 ${data.length}건 로드됨`);
+                    resolve(data);
+                };
+
+                request.onerror = () => {
+                    console.error('❌ IndexedDB 로드 실패');
+                    reject(request.error);
+                };
+            });
+        }
+
+        // 메타데이터 저장
+        async function saveMetadata(key, value) {
+            if (!db) await initDB();
+
+            return new Promise((resolve) => {
+                const transaction = db.transaction(['metadata'], 'readwrite');
+                const store = transaction.objectStore('metadata');
+                store.put({ key, value });
+                transaction.oncomplete = () => resolve();
+            });
+        }
+
+        // 기존 localStorage 함수 (트렌드, 뉴스레터 등 소량 데이터용)
         function saveState() {
-            localStorage.setItem('bidbuy_sales', JSON.stringify(state.salesData));
+            // 판매 데이터는 IndexedDB에 저장하므로 여기서 제외
             localStorage.setItem('bidbuy_trends', JSON.stringify(state.trendData));
             localStorage.setItem('bidbuy_newsletters', JSON.stringify(state.newsletters));
             localStorage.setItem('bidbuy_subscribers', JSON.stringify(state.subscribers));
+        }
+
+        // 판매 데이터 저장 (대용량)
+        async function saveSalesState() {
+            try {
+                await saveSalesData(state.salesData);
+                showToast(`✅ ${formatNumber(state.salesData.length)}건 저장 완료`, 'success');
+            } catch (err) {
+                console.error('저장 실패:', err);
+                showToast('저장 실패: ' + err.message, 'error');
+            }
         }
 
         function destroyCharts() {
@@ -1252,12 +1364,17 @@
             });
 
             // 데이터 삭제
-            document.getElementById('clearDataBtn')?.addEventListener('click', () => {
+            document.getElementById('clearDataBtn')?.addEventListener('click', async () => {
                 if (confirm('업로드된 데이터를 삭제하시겠습니까?')) {
                     state.salesData = [];
-                    saveState();
+                    // IndexedDB에서도 삭제
+                    try {
+                        await saveSalesData([]);
+                        showToast('✅ 데이터가 삭제되었습니다', 'success');
+                    } catch (err) {
+                        console.error('삭제 실패:', err);
+                    }
                     render();
-                    showToast('데이터가 삭제되었습니다');
                 }
             });
 
@@ -1495,27 +1612,21 @@
 
                 setUploadStatus(false);
 
-                // 대용량 데이터 저장 시 청크 처리 (localStorage 5MB 제한)
-                if (data.length > 30000) {
-                    console.warn('⚠️ 대용량 데이터 - localStorage 한계로 최근 30,000건만 저장');
-                    state.salesData = data.slice(-30000);
-                    showToast(`⚠️ ${data.length}건 중 최근 30,000건만 저장됨 (${elapsed}초)`, 'success');
-                } else {
-                    state.salesData = data;
-                    showToast(`✅ ${data.length}건의 데이터를 불러왔습니다 (${elapsed}초)`, 'success');
-                }
+                // IndexedDB 사용으로 대용량 데이터 지원 (최대 100만건)
+                state.salesData = data;
+                showToast(`📊 ${formatNumber(data.length)}건 로드 완료 (${elapsed}초), 저장 중...`);
 
                 // 컬럼 자동 감지
                 detectColumns(data);
 
+                // IndexedDB에 저장 (대용량 지원)
                 try {
-                    saveState();
+                    await saveSalesData(data);
+                    saveState(); // 트렌드, 뉴스레터 등 기타 데이터
+                    showToast(`✅ ${formatNumber(data.length)}건 저장 완료!`, 'success');
                 } catch (storageErr) {
-                    console.error('❌ localStorage 저장 실패:', storageErr);
-                    // localStorage 용량 초과 시 더 적게 저장
-                    state.salesData = data.slice(-10000);
-                    saveState();
-                    showToast(`⚠️ 저장 공간 부족 - 최근 10,000건만 저장됨`, 'error');
+                    console.error('❌ IndexedDB 저장 실패:', storageErr);
+                    showToast(`⚠️ 저장 실패 - ${storageErr.message}`, 'error');
                 }
 
                 render();
@@ -1614,8 +1725,40 @@ ${dataContext}
             return prompts[type] || prompts.newsletter;
         }
 
-        // 초기 렌더링
-        render();
+        // 앱 초기화 (IndexedDB에서 데이터 로드)
+        async function initApp() {
+            console.log('🚀 앱 초기화 시작...');
+
+            try {
+                // IndexedDB 초기화
+                await initDB();
+
+                // 판매 데이터 로드
+                const salesData = await loadSalesData();
+                if (salesData && salesData.length > 0) {
+                    state.salesData = salesData;
+                    console.log(`✅ ${formatNumber(salesData.length)}건의 판매 데이터 로드됨`);
+
+                    // 컬럼 매핑 확인
+                    if (salesData.length > 0) {
+                        loadColumnMapping();
+                        if (!columnMapping.category && !columnMapping.sales) {
+                            detectColumns(salesData);
+                        }
+                    }
+                }
+            } catch (err) {
+                console.warn('⚠️ IndexedDB 로드 실패, 빈 상태로 시작:', err);
+            }
+
+            state.isLoading = false;
+            saveState(); // 트렌드, 구독자 등 저장
+            render();
+            console.log('✅ 앱 초기화 완료');
+        }
+
+        // 앱 시작
+        initApp();
     </script>
 </body>
 </html>
