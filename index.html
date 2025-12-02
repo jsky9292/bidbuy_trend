@@ -296,7 +296,11 @@
             t.className = 'toast show';
             if (type === 'success') t.classList.add('success');
             if (type === 'error') t.classList.add('error');
-            setTimeout(() => { t.className = 'toast'; }, 3000);
+            // 에러는 5초, 나머지는 3초
+            const duration = type === 'error' ? 5000 : 3000;
+            setTimeout(() => { t.className = 'toast'; }, duration);
+            // 콘솔에도 기록
+            console.log(`[Toast ${type}] ${msg}`);
         }
 
         function formatNumber(n) {
@@ -343,16 +347,27 @@
                 const reader = new FileReader();
 
                 reader.onload = (e) => {
+                    console.log('📖 파일 읽기 완료, 파싱 시작...');
                     try {
-                        console.log('📖 파일 읽기 완료, 파싱 시작...');
+                        if (!e.target.result) {
+                            reject(new Error('파일 내용이 비어있습니다.'));
+                            return;
+                        }
+
                         const data = new Uint8Array(e.target.result);
                         console.log('📊 데이터 크기:', data.length, 'bytes');
 
+                        if (data.length === 0) {
+                            reject(new Error('파일이 비어있습니다.'));
+                            return;
+                        }
+
+                        console.log('🔄 XLSX.read 시작...');
                         const workbook = XLSX.read(data, { type: 'array', cellDates: true });
                         console.log('📗 워크북 시트:', workbook.SheetNames);
 
                         if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
-                            reject(new Error('시트를 찾을 수 없습니다.'));
+                            reject(new Error('시트를 찾을 수 없습니다. 파일이 손상되었을 수 있습니다.'));
                             return;
                         }
 
@@ -360,23 +375,30 @@
                         const sheet = workbook.Sheets[sheetName];
                         console.log('📄 첫 번째 시트:', sheetName);
 
+                        if (!sheet) {
+                            reject(new Error('시트 데이터를 읽을 수 없습니다.'));
+                            return;
+                        }
+
+                        console.log('🔄 JSON 변환 시작...');
                         const json = XLSX.utils.sheet_to_json(sheet, { defval: '' });
                         console.log('✅ 파싱 완료, 행 수:', json.length);
 
                         if (json.length > 0) {
                             console.log('📋 컬럼 목록:', Object.keys(json[0]));
-                            console.log('📋 첫 번째 행:', json[0]);
+                            console.log('📋 첫 번째 행 샘플:', JSON.stringify(json[0]).substring(0, 200));
                         }
 
                         if (!json || json.length === 0) {
-                            reject(new Error('데이터가 없습니다.'));
+                            reject(new Error('데이터가 없습니다. 첫 행이 헤더인지 확인해주세요.'));
                             return;
                         }
 
                         resolve(json);
                     } catch (err) {
                         console.error('❌ Excel parse error:', err);
-                        reject(new Error('파일 파싱 오류: ' + err.message));
+                        console.error('❌ 에러 스택:', err.stack);
+                        reject(new Error('파일 파싱 오류: ' + (err.message || '알 수 없는 오류')));
                     }
                 };
 
@@ -398,30 +420,121 @@
         }
 
         // ============================================
+        // 스마트 컬럼 매핑
+        // ============================================
+        const columnMapping = {
+            category: null,  // 카테고리 컬럼
+            sales: null,     // 판매금액 컬럼
+            quantity: null,  // 판매수량 컬럼
+            product: null,   // 상품명 컬럼
+            date: null       // 날짜 컬럼
+        };
+
+        // 컬럼 자동 감지
+        function detectColumns(data) {
+            if (!data || data.length === 0) return;
+
+            const firstRow = data[0];
+            const columns = Object.keys(firstRow);
+            console.log('📋 감지된 컬럼:', columns);
+
+            // 카테고리 컬럼 찾기
+            const categoryPatterns = ['카테고리', 'category', 'Category', '분류', '품목', 'type', 'Type', '상품분류', '대분류', '중분류'];
+            columnMapping.category = columns.find(col => categoryPatterns.some(p => col.includes(p))) || null;
+
+            // 판매금액 컬럼 찾기
+            const salesPatterns = ['판매금액', '금액', 'sales', 'Sales', 'amount', 'Amount', '매출', '총액', 'price', 'Price', '가격', '판매가'];
+            columnMapping.sales = columns.find(col => salesPatterns.some(p => col.includes(p))) || null;
+
+            // 판매수량 컬럼 찾기
+            const qtyPatterns = ['판매수량', '수량', 'quantity', 'Quantity', 'qty', 'Qty', '개수', 'count', 'Count'];
+            columnMapping.quantity = columns.find(col => qtyPatterns.some(p => col.includes(p))) || null;
+
+            // 상품명 컬럼 찾기
+            const productPatterns = ['상품명', '상품', 'product', 'Product', '품명', 'name', 'Name', '제품명', '아이템', 'item', 'Item'];
+            columnMapping.product = columns.find(col => productPatterns.some(p => col.includes(p))) || null;
+
+            // 날짜 컬럼 찾기
+            const datePatterns = ['날짜', 'date', 'Date', '일자', '주문일', '판매일', '거래일'];
+            columnMapping.date = columns.find(col => datePatterns.some(p => col.includes(p))) || null;
+
+            console.log('🔗 컬럼 매핑 결과:', columnMapping);
+            localStorage.setItem('bidbuy_column_mapping', JSON.stringify(columnMapping));
+
+            return columnMapping;
+        }
+
+        // 저장된 매핑 불러오기
+        function loadColumnMapping() {
+            const saved = localStorage.getItem('bidbuy_column_mapping');
+            if (saved) {
+                Object.assign(columnMapping, JSON.parse(saved));
+            }
+        }
+        loadColumnMapping();
+
+        // 데이터에서 값 추출 (매핑 사용)
+        function getValue(item, type) {
+            const col = columnMapping[type];
+            if (col && item[col] !== undefined) {
+                return item[col];
+            }
+            // 폴백: 직접 매칭 시도
+            const fallbacks = {
+                category: ['카테고리', 'category', 'Category', '분류'],
+                sales: ['판매금액', '금액', 'sales', 'Sales', 'amount'],
+                quantity: ['판매수량', '수량', 'quantity', 'Quantity', 'qty'],
+                product: ['상품명', '상품', 'product', 'Product', '품명'],
+                date: ['날짜', 'date', 'Date', '일자']
+            };
+            for (const key of (fallbacks[type] || [])) {
+                if (item[key] !== undefined) return item[key];
+            }
+            return null;
+        }
+
+        // ============================================
         // 카테고리 분석
         // ============================================
         function analyzeCategories() {
             const stats = {};
             let totalSales = 0, totalQty = 0;
+            const products = {}; // 상품별 집계
 
             state.salesData.forEach(item => {
-                const cat = item['카테고리'] || item.category || item.Category || '기타';
-                const sales = parseFloat(item['판매금액'] || item.sales || item.Sales || item['금액'] || 0);
-                const qty = parseInt(item['판매수량'] || item.quantity || item.Quantity || item['수량'] || 1);
+                const cat = getValue(item, 'category') || '미분류';
+                const sales = parseFloat(getValue(item, 'sales')) || 0;
+                const qty = parseInt(getValue(item, 'quantity')) || 1;
+                const product = getValue(item, 'product') || '';
 
-                if (!stats[cat]) stats[cat] = { sales: 0, quantity: 0, count: 0 };
+                // 카테고리별 집계
+                if (!stats[cat]) stats[cat] = { sales: 0, quantity: 0, count: 0, products: [] };
                 stats[cat].sales += sales;
                 stats[cat].quantity += qty;
                 stats[cat].count++;
                 totalSales += sales;
                 totalQty += qty;
+
+                // 상품별 집계
+                if (product) {
+                    if (!products[product]) products[product] = { sales: 0, quantity: 0, category: cat };
+                    products[product].sales += sales;
+                    products[product].quantity += qty;
+                }
             });
 
+            // 비율 계산
             Object.keys(stats).forEach(cat => {
                 stats[cat].ratio = totalSales > 0 ? (stats[cat].sales / totalSales * 100).toFixed(1) : 0;
             });
 
-            return { stats, totalSales, totalQty };
+            // TOP 10 상품
+            const topProducts = Object.entries(products)
+                .sort((a, b) => b[1].sales - a[1].sales)
+                .slice(0, 10)
+                .map(([name, data]) => ({ name, ...data }));
+
+            return { stats, totalSales, totalQty, topProducts, productCount: Object.keys(products).length };
         }
 
         // ============================================
@@ -652,14 +765,40 @@
             ${state.salesData.length > 0 ? `
             <div class="card">
                 <div class="card-header">
-                    <h3 class="card-title">업로드된 데이터 (${state.salesData.length}건)</h3>
+                    <h3 class="card-title">📋 컬럼 매핑 설정</h3>
+                    <button class="btn btn-secondary btn-sm" id="autoDetectBtn">🔍 자동 감지</button>
+                </div>
+                <p style="color:var(--toss-gray-600);margin-bottom:16px;">엑셀 파일의 컬럼을 분석에 사용할 항목과 연결해주세요:</p>
+                <div class="grid-2" style="gap:16px;">
+                    ${['category', 'sales', 'quantity', 'product'].map(type => {
+                        const labels = { category: '📂 카테고리', sales: '💰 판매금액', quantity: '📦 판매수량', product: '🏷️ 상품명' };
+                        const columns = Object.keys(state.salesData[0]);
+                        return `
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label class="form-label">${labels[type]}</label>
+                            <select class="form-input form-select column-select" data-type="${type}">
+                                <option value="">-- 선택 안함 --</option>
+                                ${columns.map(col => `<option value="${col}" ${columnMapping[type] === col ? 'selected' : ''}>${col}</option>`).join('')}
+                            </select>
+                        </div>`;
+                    }).join('')}
+                </div>
+                <button class="btn btn-primary" style="width:100%;margin-top:16px;" id="saveColumnMappingBtn">💾 매핑 저장 후 분석하기</button>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">업로드된 데이터 (${formatNumber(state.salesData.length)}건)</h3>
                     <div style="display:flex;gap:8px;">
                         <button class="btn btn-primary" id="analyzeBtn">📈 데이터 분석하기</button>
                         <button class="btn btn-danger btn-sm" id="clearDataBtn">삭제</button>
                     </div>
                 </div>
                 <div class="info-box green">
-                    ✅ ${state.salesData.length}건의 데이터가 업로드되었습니다. "데이터 분석하기" 버튼을 클릭하여 분석 결과를 확인하세요.
+                    ✅ ${formatNumber(state.salesData.length)}건의 데이터가 업로드되었습니다.
+                    ${columnMapping.category ? `<br>📂 카테고리: <strong>${columnMapping.category}</strong>` : ''}
+                    ${columnMapping.sales ? ` | 💰 금액: <strong>${columnMapping.sales}</strong>` : ''}
+                    ${columnMapping.quantity ? ` | 📦 수량: <strong>${columnMapping.quantity}</strong>` : ''}
                 </div>
                 <div class="table-wrapper" style="max-height:400px;overflow-y:auto;margin-top:16px;">
                     <table class="table">
@@ -673,7 +812,7 @@
                         </tbody>
                     </table>
                 </div>
-                ${state.salesData.length > 20 ? `<p style="text-align:center;color:var(--toss-gray-500);padding:16px;">... 외 ${state.salesData.length - 20}건</p>` : ''}
+                ${state.salesData.length > 20 ? `<p style="text-align:center;color:var(--toss-gray-500);padding:16px;">... 외 ${formatNumber(state.salesData.length - 20)}건</p>` : ''}
             </div>
             ` : `
             <div class="card">
@@ -1091,6 +1230,27 @@
                 showToast('분석 페이지로 이동합니다');
             });
 
+            // 컬럼 매핑 저장
+            document.getElementById('saveColumnMappingBtn')?.addEventListener('click', () => {
+                document.querySelectorAll('.column-select').forEach(select => {
+                    const type = select.dataset.type;
+                    columnMapping[type] = select.value || null;
+                });
+                localStorage.setItem('bidbuy_column_mapping', JSON.stringify(columnMapping));
+                showToast('✅ 컬럼 매핑이 저장되었습니다!', 'success');
+                state.currentPage = 'analysis';
+                render();
+            });
+
+            // 자동 감지 버튼
+            document.getElementById('autoDetectBtn')?.addEventListener('click', () => {
+                if (state.salesData.length > 0) {
+                    detectColumns(state.salesData);
+                    render();
+                    showToast('✅ 컬럼이 자동 감지되었습니다!', 'success');
+                }
+            });
+
             // 데이터 삭제
             document.getElementById('clearDataBtn')?.addEventListener('click', () => {
                 if (confirm('업로드된 데이터를 삭제하시겠습니까?')) {
@@ -1345,6 +1505,9 @@
                     showToast(`✅ ${data.length}건의 데이터를 불러왔습니다 (${elapsed}초)`, 'success');
                 }
 
+                // 컬럼 자동 감지
+                detectColumns(data);
+
                 try {
                     saveState();
                 } catch (storageErr) {
@@ -1356,6 +1519,14 @@
                 }
 
                 render();
+
+                // 컬럼 매핑 결과 알림
+                const mapped = Object.entries(columnMapping).filter(([k,v]) => v).map(([k,v]) => `${k}→${v}`).join(', ');
+                if (mapped) {
+                    console.log('✅ 자동 매핑:', mapped);
+                } else {
+                    showToast('⚠️ 컬럼을 자동 인식하지 못했습니다. 컬럼 설정을 확인해주세요', 'error');
+                }
             } catch (err) {
                 console.error('❌ File upload error:', err);
                 setUploadStatus(false);
@@ -1364,17 +1535,81 @@
         }
 
         function buildPrompt(type) {
-            const top5 = state.trendData.slice(0, 5);
-            const dataContext = `
-[데이터] ${state.weekInfo.month}월 ${state.weekInfo.week}주차
-TOP 5 키워드:
-${top5.map((t, i) => `${i+1}. ${t.keyword} (${t.category}) - ${t.searches}건, ${t.change >= 0 ? '+' : ''}${t.change}%`).join('\n')}
+            // 실제 판매 데이터 분석
+            const { stats, totalSales, totalQty, topProducts, productCount } = analyzeCategories();
+            const sortedCats = Object.entries(stats).sort((a, b) => b[1].sales - a[1].sales).slice(0, 5);
+
+            // 트렌드 데이터
+            const top5Trends = state.trendData.slice(0, 5);
+
+            // 데이터 컨텍스트 구성
+            let dataContext = `
+[분석 기간] ${state.weekInfo.month}월 ${state.weekInfo.week}주차
+[총 판매 현황]
+- 총 판매금액: ${formatNumber(totalSales)}원
+- 총 판매수량: ${formatNumber(totalQty)}개
+- 분석 상품 수: ${formatNumber(productCount)}개
 `;
 
+            if (sortedCats.length > 0) {
+                dataContext += `
+[카테고리별 TOP 5 판매]
+${sortedCats.map(([cat, data], i) => `${i+1}. ${cat}: ${formatNumber(data.sales)}원 (${data.ratio}%, ${formatNumber(data.quantity)}개)`).join('\n')}
+`;
+            }
+
+            if (topProducts && topProducts.length > 0) {
+                dataContext += `
+[인기 상품 TOP 5]
+${topProducts.slice(0, 5).map((p, i) => `${i+1}. ${p.name} (${p.category}): ${formatNumber(p.sales)}원, ${formatNumber(p.quantity)}개`).join('\n')}
+`;
+            }
+
+            if (top5Trends.length > 0) {
+                dataContext += `
+[트렌드 키워드 TOP 5]
+${top5Trends.map((t, i) => `${i+1}. ${t.keyword} (${t.category}) - 검색 ${formatNumber(t.searches)}건, ${t.change >= 0 ? '+' : ''}${t.change}%`).join('\n')}
+`;
+            }
+
             const prompts = {
-                newsletter: `비드바이코리아 마케팅 담당자로서 아래 데이터 기반 뉴스레터 본문을 작성해주세요.\n${dataContext}\n톤: 친근하고 전문적, 300~400자, 이모지 적절히 활용`,
-                blog: `일본 구매대행 전문 블로거로서 SEO 블로그 포스트를 작성해주세요.\n${dataContext}\n제목 포함, 600~800자`,
-                sns: `비드바이코리아 SNS 담당자로서 인스타그램용 포스트를 작성해주세요.\n${dataContext}\n150자 내외, 해시태그 5~7개`
+                newsletter: `당신은 비드바이코리아(일본 구매대행 서비스)의 마케팅 담당자입니다.
+아래 실제 판매 데이터를 분석하여 고객에게 보낼 뉴스레터를 작성해주세요.
+
+${dataContext}
+
+[작성 가이드라인]
+- 톤: 친근하면서도 전문적
+- 길이: 400~500자
+- 이모지를 적절히 활용
+- 인기 상품과 트렌드를 자연스럽게 소개
+- 일본 구매대행의 장점 강조
+- 마지막에 행동 유도(CTA) 포함`,
+
+                blog: `당신은 일본 구매대행 전문 블로거입니다.
+아래 판매 데이터를 바탕으로 SEO 최적화된 블로그 포스트를 작성해주세요.
+
+${dataContext}
+
+[작성 가이드라인]
+- 매력적인 제목 포함 (키워드 포함)
+- 길이: 800~1000자
+- 소제목으로 구조화
+- 데이터 기반 인사이트 제공
+- 일본 직구 팁 포함
+- 자연스러운 상품 추천`,
+
+                sns: `당신은 비드바이코리아의 SNS 담당자입니다.
+아래 데이터를 바탕으로 인스타그램 피드용 포스트를 작성해주세요.
+
+${dataContext}
+
+[작성 가이드라인]
+- 길이: 150~200자
+- 눈길을 끄는 첫 문장
+- 이모지 적극 활용
+- 관련 해시태그 7~10개 포함
+- 행동 유도 문구`
             };
             return prompts[type] || prompts.newsletter;
         }
