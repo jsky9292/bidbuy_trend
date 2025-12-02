@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>비드바이 분석 시스템</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <style>
@@ -320,19 +321,43 @@
         // ============================================
         async function parseExcel(file) {
             return new Promise((resolve, reject) => {
+                // XLSX 라이브러리 로드 확인
+                if (typeof XLSX === 'undefined') {
+                    reject(new Error('엑셀 라이브러리 로딩 중입니다. 잠시 후 다시 시도해주세요.'));
+                    return;
+                }
+
                 const reader = new FileReader();
+
                 reader.onload = (e) => {
                     try {
                         const data = new Uint8Array(e.target.result);
-                        const workbook = XLSX.read(data, { type: 'array' });
+                        const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+
+                        if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
+                            reject(new Error('시트를 찾을 수 없습니다.'));
+                            return;
+                        }
+
                         const sheet = workbook.Sheets[workbook.SheetNames[0]];
-                        const json = XLSX.utils.sheet_to_json(sheet);
+                        const json = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+
+                        if (!json || json.length === 0) {
+                            reject(new Error('데이터가 없습니다.'));
+                            return;
+                        }
+
                         resolve(json);
                     } catch (err) {
-                        reject(err);
+                        console.error('Excel parse error:', err);
+                        reject(new Error('파일 형식을 읽을 수 없습니다.'));
                     }
                 };
-                reader.onerror = reject;
+
+                reader.onerror = () => {
+                    reject(new Error('파일을 읽을 수 없습니다.'));
+                };
+
                 reader.readAsArrayBuffer(file);
             });
         }
@@ -1211,6 +1236,30 @@
         }
 
         async function handleFileUpload(file) {
+            // 파일 유효성 검사
+            if (!file) {
+                showToast('파일을 선택해주세요');
+                return;
+            }
+
+            const validTypes = [
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // xlsx
+                'application/vnd.ms-excel', // xls
+                'text/csv', // csv
+                'application/csv'
+            ];
+            const ext = file.name.split('.').pop().toLowerCase();
+
+            if (!validTypes.includes(file.type) && !['xlsx', 'xls', 'csv'].includes(ext)) {
+                showToast('지원하지 않는 파일 형식입니다. (xlsx, xls, csv만 가능)');
+                return;
+            }
+
+            if (file.size > 10 * 1024 * 1024) { // 10MB 제한
+                showToast('파일 크기가 너무 큽니다. (최대 10MB)');
+                return;
+            }
+
             try {
                 showToast('파일 분석 중...');
                 const data = await parseExcel(file);
@@ -1219,7 +1268,8 @@
                 render();
                 showToast(`${data.length}건의 데이터를 불러왔습니다`);
             } catch (err) {
-                showToast('파일 처리 오류: ' + err.message);
+                console.error('File upload error:', err);
+                showToast('오류: ' + err.message);
             }
         }
 
