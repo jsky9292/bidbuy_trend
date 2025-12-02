@@ -260,22 +260,51 @@
             newsletters: JSON.parse(localStorage.getItem('bidbuy_newsletters') || '[]'),
             subscribers: JSON.parse(localStorage.getItem('bidbuy_subscribers') || '[]'),
             geminiApiKey: localStorage.getItem('bidbuy_gemini_key') || '',
+            stibeeApiKey: localStorage.getItem('bidbuy_stibee_key') || '',
+            stibeeListId: localStorage.getItem('bidbuy_stibee_list') || '',
             showApiKey: false,
+            showStibeeKey: false,
             isGenerating: false,
             generatedContent: '',
+            newsletterHtml: '', // 생성된 HTML 뉴스레터
             weekInfo: { month: new Date().getMonth() + 1, week: Math.ceil(new Date().getDate() / 7) },
             charts: {},
             isLoading: true // 데이터 로딩 중 표시
         };
 
-        // 샘플 데이터 초기화
+        // 샘플 데이터 초기화 (TOP 30)
         if (state.trendData.length === 0) {
             state.trendData = [
                 { id: 1, keyword: '미즈노 글러브', category: '야구용품', searches: 347, change: 23, price: 15000 },
                 { id: 2, keyword: '원피스 피규어', category: '피규어', searches: 282, change: 45, price: 8500 },
                 { id: 3, keyword: '아식스 배트', category: '야구용품', searches: 269, change: 12, price: 25000 },
                 { id: 4, keyword: '건담 프라모델', category: '피규어', searches: 228, change: 8, price: 4500 },
-                { id: 5, keyword: '포켓몬 카드', category: '완구', searches: 217, change: 31, price: 3000 },
+                { id: 5, keyword: '포켓몬 카드', category: '피규어', searches: 217, change: 31, price: 3000 },
+                { id: 6, keyword: '시세이도 선크림', category: '뷰티', searches: 190, change: 18, price: 12000 },
+                { id: 7, keyword: 'SK-II 에센스', category: '뷰티', searches: 183, change: 15, price: 45000 },
+                { id: 8, keyword: '칼비 감자칩', category: '식품', searches: 172, change: -5, price: 2500 },
+                { id: 9, keyword: '유니클로 히트텍', category: '생활', searches: 142, change: 67, price: 8000 },
+                { id: 10, keyword: '무인양품 문구', category: '생활', searches: 139, change: 12, price: 3500 },
+                { id: 11, keyword: '나이키 덩크', category: '패션', searches: 135, change: 28, price: 35000 },
+                { id: 12, keyword: '소니 이어폰', category: '전자기기', searches: 128, change: 19, price: 28000 },
+                { id: 13, keyword: '닌텐도 스위치', category: '게임', searches: 124, change: 8, price: 85000 },
+                { id: 14, keyword: '다이소 주방용품', category: '생활', searches: 118, change: 5, price: 1500 },
+                { id: 15, keyword: '아디다스 삼바', category: '패션', searches: 112, change: 42, price: 32000 },
+                { id: 16, keyword: '캐논 카메라', category: '전자기기', searches: 108, change: -3, price: 120000 },
+                { id: 17, keyword: '레고 클래식', category: '완구', searches: 105, change: 14, price: 15000 },
+                { id: 18, keyword: '산리오 굿즈', category: '캐릭터', searches: 98, change: 56, price: 5000 },
+                { id: 19, keyword: '아이리버 MP3', category: '전자기기', searches: 92, change: -12, price: 18000 },
+                { id: 20, keyword: '반다이 타마고치', category: '완구', searches: 88, change: 33, price: 6500 },
+                { id: 21, keyword: '코세 화장품', category: '뷰티', searches: 85, change: 7, price: 22000 },
+                { id: 22, keyword: '아사히 맥주', category: '식품', searches: 82, change: 4, price: 4500 },
+                { id: 23, keyword: '뉴발란스 993', category: '패션', searches: 79, change: 25, price: 48000 },
+                { id: 24, keyword: '파나소닉 면도기', category: '생활', searches: 75, change: 9, price: 35000 },
+                { id: 25, keyword: '요넥스 라켓', category: '스포츠', searches: 72, change: 11, price: 42000 },
+                { id: 26, keyword: '지브리 DVD', category: '미디어', searches: 68, change: 6, price: 8000 },
+                { id: 27, keyword: '무지 노트', category: '문구', searches: 65, change: 3, price: 2000 },
+                { id: 28, keyword: '아이코스 케이스', category: '생활', searches: 62, change: -8, price: 4000 },
+                { id: 29, keyword: '카시오 시계', category: '패션', searches: 58, change: 15, price: 25000 },
+                { id: 30, keyword: '세이코 시계', category: '패션', searches: 55, change: 10, price: 65000 },
             ];
         }
 
@@ -306,7 +335,11 @@
             return new Intl.NumberFormat('ko-KR').format(n || 0);
         }
 
-        function formatCurrency(n) {
+        function formatCurrency(n, unit = '¥') {
+            return unit + new Intl.NumberFormat('ko-KR').format(n || 0);
+        }
+
+        function formatKRW(n) {
             return new Intl.NumberFormat('ko-KR').format(n || 0) + '원';
         }
 
@@ -593,45 +626,126 @@
         }
 
         // ============================================
-        // 스마트 컬럼 매핑
+        // 스마트 컬럼 매핑 (계층적 카테고리 지원)
         // ============================================
         const columnMapping = {
-            category: null,  // 카테고리 컬럼
-            sales: null,     // 판매금액 컬럼
-            quantity: null,  // 판매수량 컬럼
-            product: null,   // 상품명 컬럼
-            date: null       // 날짜 컬럼
+            category1: null,  // 대분류 (depth1)
+            category2: null,  // 중분류 (depth2)
+            category3: null,  // 소분류 (depth3)
+            category4: null,  // 세부분류 (depth4)
+            sales: null,      // 판매금액 컬럼
+            quantity: null,   // 판매수량 컬럼
+            product: null,    // 상품명 컬럼
+            date: null,       // 날짜 컬럼
+            site: null        // 사이트 컬럼
         };
 
-        // 컬럼 자동 감지
+        // 현재 분석에 사용할 카테고리 depth (1~4)
+        let analysisCategoryDepth = 1;
+
+        // 월별 필터 (null = 전체, '2025-08' 형식)
+        let selectedMonth = null;
+
+        // 사용 가능한 월 목록 추출
+        function getAvailableMonths() {
+            if (!state.salesData || state.salesData.length === 0) return [];
+
+            const months = new Set();
+            const dateCol = columnMapping.date;
+
+            state.salesData.forEach(item => {
+                let dateVal = dateCol ? item[dateCol] : item['결제일'];
+                if (!dateVal) return;
+
+                // 날짜 파싱
+                let date;
+                if (dateVal instanceof Date) {
+                    date = dateVal;
+                } else if (typeof dateVal === 'number') {
+                    // Excel 날짜 시리얼
+                    date = new Date((dateVal - 25569) * 86400 * 1000);
+                } else if (typeof dateVal === 'string') {
+                    date = new Date(dateVal);
+                }
+
+                if (date && !isNaN(date.getTime())) {
+                    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                    months.add(monthKey);
+                }
+            });
+
+            return Array.from(months).sort();
+        }
+
+        // 필터링된 데이터 가져오기
+        function getFilteredData() {
+            if (!selectedMonth) return state.salesData;
+
+            const dateCol = columnMapping.date;
+            return state.salesData.filter(item => {
+                let dateVal = dateCol ? item[dateCol] : item['결제일'];
+                if (!dateVal) return false;
+
+                let date;
+                if (dateVal instanceof Date) {
+                    date = dateVal;
+                } else if (typeof dateVal === 'number') {
+                    date = new Date((dateVal - 25569) * 86400 * 1000);
+                } else if (typeof dateVal === 'string') {
+                    date = new Date(dateVal);
+                }
+
+                if (date && !isNaN(date.getTime())) {
+                    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                    return monthKey === selectedMonth;
+                }
+                return false;
+            });
+        }
+
+        // 컬럼 자동 감지 (계층적 카테고리 지원)
         function detectColumns(data) {
             if (!data || data.length === 0) return;
 
             const firstRow = data[0];
             const columns = Object.keys(firstRow);
             console.log('📋 감지된 컬럼:', columns);
+            console.log('📋 첫 번째 행 데이터:', firstRow);
 
-            // 카테고리 컬럼 찾기
-            const categoryPatterns = ['카테고리', 'category', 'Category', '분류', '품목', 'type', 'Type', '상품분류', '대분류', '중분류'];
-            columnMapping.category = columns.find(col => categoryPatterns.some(p => col.includes(p))) || null;
+            // 계층적 카테고리 컬럼 찾기 (카테고리1~9)
+            columnMapping.category1 = columns.find(col => col.trim() === '카테고리1') || null;
+            columnMapping.category2 = columns.find(col => col.trim() === '카테고리2') || null;
+            columnMapping.category3 = columns.find(col => col.trim() === '카테고리3') || null;
+            columnMapping.category4 = columns.find(col => col.trim() === '카테고리4') || null;
 
-            // 판매금액 컬럼 찾기
-            const salesPatterns = ['판매금액', '금액', 'sales', 'Sales', 'amount', 'Amount', '매출', '총액', 'price', 'Price', '가격', '판매가'];
-            columnMapping.sales = columns.find(col => salesPatterns.some(p => col.includes(p))) || null;
+            // 카테고리1이 없으면 일반 패턴으로 검색
+            if (!columnMapping.category1) {
+                const categoryPatterns = ['카테고리', 'category', 'Category', '분류', '대분류'];
+                columnMapping.category1 = columns.find(col => categoryPatterns.some(p => col.toLowerCase().includes(p.toLowerCase()))) || null;
+            }
+
+            // 판매금액 컬럼 찾기 (상품가 우선)
+            columnMapping.sales = columns.find(col => col.trim() === '상품가') ||
+                                  columns.find(col => ['판매금액', '금액', 'sales', 'price', '가격', '낙찰가'].some(p => col.toLowerCase().includes(p.toLowerCase()))) || null;
 
             // 판매수량 컬럼 찾기
-            const qtyPatterns = ['판매수량', '수량', 'quantity', 'Quantity', 'qty', 'Qty', '개수', 'count', 'Count'];
-            columnMapping.quantity = columns.find(col => qtyPatterns.some(p => col.includes(p))) || null;
+            columnMapping.quantity = columns.find(col => ['판매수량', '수량', 'quantity', 'qty', '개수'].some(p => col.toLowerCase().includes(p.toLowerCase()))) || null;
 
             // 상품명 컬럼 찾기
-            const productPatterns = ['상품명', '상품', 'product', 'Product', '품명', 'name', 'Name', '제품명', '아이템', 'item', 'Item'];
-            columnMapping.product = columns.find(col => productPatterns.some(p => col.includes(p))) || null;
+            columnMapping.product = columns.find(col => col.trim() === '상품명') ||
+                                    columns.find(col => ['상품', 'product', '품명', 'name', '제품명'].some(p => col.toLowerCase().includes(p.toLowerCase()))) || null;
 
             // 날짜 컬럼 찾기
-            const datePatterns = ['날짜', 'date', 'Date', '일자', '주문일', '판매일', '거래일'];
-            columnMapping.date = columns.find(col => datePatterns.some(p => col.includes(p))) || null;
+            columnMapping.date = columns.find(col => col.trim() === '결제일') ||
+                                 columns.find(col => ['날짜', 'date', '일자', '주문일'].some(p => col.toLowerCase().includes(p.toLowerCase()))) || null;
+
+            // 사이트 컬럼 찾기
+            columnMapping.site = columns.find(col => col.trim() === '사이트') ||
+                                 columns.find(col => ['site', '플랫폼', '출처'].some(p => col.toLowerCase().includes(p.toLowerCase()))) || null;
 
             console.log('🔗 컬럼 매핑 결과:', columnMapping);
+
+            // 매핑 결과 저장
             localStorage.setItem('bidbuy_column_mapping', JSON.stringify(columnMapping));
 
             return columnMapping;
@@ -646,19 +760,39 @@
         }
         loadColumnMapping();
 
-        // 데이터에서 값 추출 (매핑 사용)
-        function getValue(item, type) {
+        // 데이터에서 값 추출 (매핑 사용) - 계층적 카테고리 지원
+        function getValue(item, type, depth = null) {
+            // 카테고리 요청 시 depth에 따라 적절한 컬럼 반환
+            if (type === 'category') {
+                const targetDepth = depth || analysisCategoryDepth;
+                const catCol = columnMapping[`category${targetDepth}`];
+                if (catCol && item[catCol] !== undefined && item[catCol] !== null && item[catCol] !== '') {
+                    return item[catCol];
+                }
+                // depth 1부터 순차적으로 폴백
+                for (let d = 1; d <= 4; d++) {
+                    const col = columnMapping[`category${d}`];
+                    if (col && item[col] !== undefined && item[col] !== null && item[col] !== '') {
+                        return item[col];
+                    }
+                }
+            }
+
             const col = columnMapping[type];
             if (col && item[col] !== undefined) {
                 return item[col];
             }
             // 폴백: 직접 매칭 시도
             const fallbacks = {
-                category: ['카테고리', 'category', 'Category', '분류'],
-                sales: ['판매금액', '금액', 'sales', 'Sales', 'amount'],
+                category1: ['카테고리1', '대분류'],
+                category2: ['카테고리2', '중분류'],
+                category3: ['카테고리3', '소분류'],
+                category4: ['카테고리4', '세부분류'],
+                sales: ['상품가', '판매금액', '금액', 'sales', 'Sales', 'amount', '가격'],
                 quantity: ['판매수량', '수량', 'quantity', 'Quantity', 'qty'],
                 product: ['상품명', '상품', 'product', 'Product', '품명'],
-                date: ['날짜', 'date', 'Date', '일자']
+                date: ['결제일', '날짜', 'date', 'Date', '일자'],
+                site: ['사이트', 'site', '플랫폼']
             };
             for (const key of (fallbacks[type] || [])) {
                 if (item[key] !== undefined) return item[key];
@@ -666,48 +800,187 @@
             return null;
         }
 
+        // 실제 데이터에서 TOP 30 트렌드 키워드 추출 (월별 필터 적용)
+        function extractTrendFromData() {
+            // 월별 필터 적용된 데이터 사용
+            const filteredData = getFilteredData();
+
+            if (!filteredData || filteredData.length === 0) {
+                console.log('📊 트렌드 추출: 데이터 없음');
+                return [];
+            }
+
+            console.log('📊 트렌드 추출 시작 - 필터 적용 데이터:', filteredData.length, '건', '(선택 월:', selectedMonth || '전체', ')');
+
+            // 카테고리4 (세부분류) 기준으로 집계
+            const keywordStats = {};
+
+            filteredData.forEach(item => {
+                // depth 4 (세부분류) 우선, 없으면 depth 3, 2, 1 순서
+                let keyword = null;
+                for (let d = 4; d >= 1; d--) {
+                    const catCol = columnMapping[`category${d}`];
+                    if (catCol && item[catCol] && item[catCol].trim() !== '') {
+                        keyword = item[catCol].trim();
+                        break;
+                    }
+                }
+
+                if (!keyword || keyword === '') return;
+
+                // 상위 카테고리 (depth 1) 찾기 - 쉼표+공백 통일
+                const cat1Col = columnMapping.category1;
+                let parentCategory = cat1Col ? (item[cat1Col] || '기타') : '기타';
+                // 쉼표 뒤 공백 통일 처리
+                if (typeof parentCategory === 'string') {
+                    parentCategory = parentCategory.replace(/,\s*/g, ', ').trim();
+                }
+
+                // 판매금액 파싱
+                let salesVal = getValue(item, 'sales');
+                if (typeof salesVal === 'string') {
+                    salesVal = salesVal.replace(/[,\s¥￥원]/g, '');
+                }
+                const sales = parseFloat(salesVal) || 0;
+
+                if (!keywordStats[keyword]) {
+                    keywordStats[keyword] = {
+                        keyword,
+                        category: parentCategory,
+                        count: 0,
+                        totalSales: 0
+                    };
+                }
+                keywordStats[keyword].count++;
+                keywordStats[keyword].totalSales += sales;
+            });
+
+            // TOP 30 추출 (거래 건수 기준 정렬)
+            const sorted = Object.values(keywordStats)
+                .sort((a, b) => b.count - a.count)
+                .slice(0, 30);
+
+            // trendData 형식으로 변환
+            const trendData = sorted.map((item, index) => ({
+                id: index + 1,
+                keyword: item.keyword,
+                category: item.category,
+                searches: item.count, // 거래 건수를 검색량으로 사용
+                change: Math.floor(Math.random() * 40) - 10, // 임시: 변화율은 랜덤 (-10% ~ +30%)
+                price: Math.round(item.totalSales / item.count) // 평균 단가
+            }));
+
+            console.log('📊 트렌드 추출 완료:', trendData.length, '개 키워드');
+            console.log('📊 TOP 5:', trendData.slice(0, 5).map(t => `${t.keyword}(${t.searches}건)`).join(', '));
+
+            return trendData;
+        }
+
         // ============================================
-        // 카테고리 분석
+        // 카테고리 분석 (계층적 분석 지원 + 월별 필터)
         // ============================================
-        function analyzeCategories() {
+        function analyzeCategories(depth = null) {
+            const targetDepth = depth || analysisCategoryDepth;
             const stats = {};
             let totalSales = 0, totalQty = 0;
             const products = {}; // 상품별 집계
+            const siteStats = {}; // 사이트별 집계
 
-            state.salesData.forEach(item => {
-                const cat = getValue(item, 'category') || '미분류';
-                const sales = parseFloat(getValue(item, 'sales')) || 0;
+            // 월별 필터 적용된 데이터 사용
+            const filteredData = getFilteredData();
+
+            // 첫 번째 데이터로 디버그 (한 번만)
+            if (filteredData.length > 0 && !window._analyzedOnce) {
+                window._analyzedOnce = true;
+                console.log('🔍 분석 시작 - 총 데이터:', state.salesData.length, '건, 필터 적용:', filteredData.length, '건');
+                console.log('📋 컬럼 매핑:', columnMapping);
+                console.log('📋 분석 깊이:', targetDepth);
+                console.log('📋 선택 월:', selectedMonth || '전체');
+                console.log('📝 첫 번째 데이터 샘플:', filteredData[0]);
+                console.log('📝 추출된 값 샘플:', {
+                    category1: getValue(filteredData[0], 'category', 1),
+                    category2: getValue(filteredData[0], 'category', 2),
+                    category3: getValue(filteredData[0], 'category', 3),
+                    category4: getValue(filteredData[0], 'category', 4),
+                    sales: getValue(filteredData[0], 'sales'),
+                    product: getValue(state.salesData[0], 'product'),
+                    site: getValue(state.salesData[0], 'site')
+                });
+            }
+
+            filteredData.forEach(item => {
+                // 지정된 depth의 카테고리 값 가져오기
+                const cat = getValue(item, 'category', targetDepth) || '미분류';
+
+                // 숫자 파싱 개선: 쉼표, 공백 등 제거
+                let salesVal = getValue(item, 'sales');
+                if (typeof salesVal === 'string') {
+                    salesVal = salesVal.replace(/[,\s¥￥원]/g, '');
+                }
+                const sales = parseFloat(salesVal) || 0;
                 const qty = parseInt(getValue(item, 'quantity')) || 1;
                 const product = getValue(item, 'product') || '';
+                const site = getValue(item, 'site') || '기타';
 
                 // 카테고리별 집계
-                if (!stats[cat]) stats[cat] = { sales: 0, quantity: 0, count: 0, products: [] };
+                if (!stats[cat]) stats[cat] = { sales: 0, quantity: 0, count: 0, avgPrice: 0 };
                 stats[cat].sales += sales;
                 stats[cat].quantity += qty;
                 stats[cat].count++;
                 totalSales += sales;
-                totalQty += qty;
+                totalQty++; // 거래건수로 계산
+
+                // 사이트별 집계
+                if (!siteStats[site]) siteStats[site] = { sales: 0, count: 0 };
+                siteStats[site].sales += sales;
+                siteStats[site].count++;
 
                 // 상품별 집계
                 if (product) {
-                    if (!products[product]) products[product] = { sales: 0, quantity: 0, category: cat };
+                    if (!products[product]) products[product] = { sales: 0, quantity: 0, category: cat, count: 0 };
                     products[product].sales += sales;
                     products[product].quantity += qty;
+                    products[product].count++;
                 }
             });
 
-            // 비율 계산
+            // 비율 및 평균 계산
             Object.keys(stats).forEach(cat => {
                 stats[cat].ratio = totalSales > 0 ? (stats[cat].sales / totalSales * 100).toFixed(1) : 0;
+                stats[cat].avgPrice = stats[cat].count > 0 ? Math.round(stats[cat].sales / stats[cat].count) : 0;
             });
 
-            // TOP 10 상품
+            // TOP 10 상품 (판매금액 기준)
             const topProducts = Object.entries(products)
                 .sort((a, b) => b[1].sales - a[1].sales)
                 .slice(0, 10)
                 .map(([name, data]) => ({ name, ...data }));
 
-            return { stats, totalSales, totalQty, topProducts, productCount: Object.keys(products).length };
+            // TOP 5 사이트
+            const topSites = Object.entries(siteStats)
+                .sort((a, b) => b[1].sales - a[1].sales)
+                .slice(0, 5)
+                .map(([name, data]) => ({ name, ...data }));
+
+            // 분석 결과 디버그
+            console.log('📊 분석 결과 (depth=' + targetDepth + '):', {
+                카테고리수: Object.keys(stats).length,
+                총판매금액: totalSales,
+                총거래건수: totalQty,
+                평균단가: totalQty > 0 ? Math.round(totalSales / totalQty) : 0,
+                TOP3카테고리: Object.entries(stats).sort((a,b) => b[1].sales - a[1].sales).slice(0,3).map(([k,v]) => `${k}(${formatCurrency(v.sales)})`)
+            });
+
+            return {
+                stats,
+                totalSales,
+                totalQty,
+                topProducts,
+                topSites,
+                productCount: Object.keys(products).length,
+                avgPrice: totalQty > 0 ? Math.round(totalSales / totalQty) : 0,
+                depth: targetDepth
+            };
         }
 
         // ============================================
@@ -719,7 +992,7 @@
                 return null;
             }
 
-            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${state.geminiApiKey}`, {
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${state.geminiApiKey}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -784,7 +1057,6 @@
                 { id: 'analysis', icon: '📈', label: '판매 분석' },
                 { id: 'trends', icon: '🔥', label: '트렌드 관리' },
                 { id: 'newsletter', icon: '✉️', label: '뉴스레터' },
-                { id: 'subscribers', icon: '👥', label: '구독자 관리' },
                 { id: 'settings', icon: '⚙️', label: '설정' },
             ];
 
@@ -825,85 +1097,166 @@
         // 대시보드
         // ============================================
         function renderDashboard() {
-            const { stats, totalSales, totalQty } = analyzeCategories();
+            const { stats, totalSales, totalQty, avgPrice } = analyzeCategories();
             const catCount = Object.keys(stats).length;
-            const activeSubscribers = state.subscribers.filter(s => s.subscribed).length;
+            const availableMonths = getAvailableMonths();
+            const filteredData = getFilteredData();
+            const periodLabel = selectedMonth ? `${parseInt(selectedMonth.split('-')[1])}월` : '전체';
 
             return `
             <div class="page-header">
                 <h1 class="page-title">대시보드</h1>
-                <p class="page-desc">${state.weekInfo.month}월 ${state.weekInfo.week}주차 현황</p>
+                <p class="page-desc">${selectedMonth ? `${parseInt(selectedMonth.split('-')[1])}월` : state.weekInfo.month + '월 ' + state.weekInfo.week + '주차'} 현황</p>
             </div>
+
+            <!-- 월별 필터 -->
+            ${state.salesData.length > 0 && availableMonths.length > 0 ? `
+            <div class="card" style="margin-bottom:20px;padding:16px;">
+                <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                    <span style="font-weight:600;color:var(--toss-gray-700);">📅 기간 선택:</span>
+                    <button class="btn ${!selectedMonth ? 'btn-primary' : 'btn-secondary'} btn-sm month-selector" data-month="">
+                        전체 (${formatNumber(state.salesData.length)}건)
+                    </button>
+                    ${availableMonths.map(m => {
+                        const monthData = state.salesData.filter(item => {
+                            const dateCol = columnMapping.date;
+                            let dateVal = dateCol ? item[dateCol] : item['결제일'];
+                            if (!dateVal) return false;
+                            let date;
+                            if (dateVal instanceof Date) date = dateVal;
+                            else if (typeof dateVal === 'number') date = new Date((dateVal - 25569) * 86400 * 1000);
+                            else if (typeof dateVal === 'string') date = new Date(dateVal);
+                            if (date && !isNaN(date.getTime())) {
+                                const monthKey = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0');
+                                return monthKey === m;
+                            }
+                            return false;
+                        });
+                        return '<button class="btn ' + (selectedMonth === m ? 'btn-primary' : 'btn-secondary') + ' btn-sm month-selector" data-month="' + m + '">' +
+                            parseInt(m.split('-')[1]) + '월 (' + formatNumber(monthData.length) + '건)</button>';
+                    }).join('')}
+                    <button class="btn btn-danger btn-sm" id="resetDataBtn" style="margin-left:auto;">🗑️ 데이터 초기화</button>
+                </div>
+            </div>
+            ` : ''}
 
             <div class="stats-grid">
                 <div class="stat-card">
-                    <div class="stat-label">총 판매금액</div>
+                    <div class="stat-label">총 판매금액 (${periodLabel})</div>
                     <div class="stat-value blue">${formatCurrency(totalSales)}</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-label">총 판매수량</div>
-                    <div class="stat-value">${formatNumber(totalQty)}개</div>
+                    <div class="stat-label">총 거래건수 (${periodLabel})</div>
+                    <div class="stat-value">${formatNumber(totalQty)}건</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">평균 단가</div>
+                    <div class="stat-value">${formatCurrency(avgPrice)}</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-label">카테고리</div>
                     <div class="stat-value">${catCount}개</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">구독자</div>
-                    <div class="stat-value">${activeSubscribers}명</div>
                 </div>
             </div>
 
             <div class="grid-2">
                 <div class="card">
                     <div class="card-header"><h3 class="card-title">카테고리별 판매</h3></div>
-                    <div class="chart-container"><canvas id="catChart"></canvas></div>
+                    <div class="chart-container" style="height:280px;"><canvas id="catChart"></canvas></div>
                 </div>
                 <div class="card">
-                    <div class="card-header"><h3 class="card-title">TOP 5 트렌드</h3></div>
+                    <div class="card-header">
+                        <h3 class="card-title">🔥 TOP 5 인기 키워드</h3>
+                        <a href="#" class="trend-link" data-page="trends" style="font-size:13px;color:var(--toss-blue);">더보기 →</a>
+                    </div>
                     ${state.trendData.length > 0 ? `
                     <div>
                         ${state.trendData.slice(0, 5).map((t, i) => `
-                        <div class="data-row">
-                            <div>
-                                <span class="badge ${i < 3 ? 'badge-red' : 'badge-blue'}" style="margin-right:8px;">${i + 1}</span>
-                                <strong>${t.keyword}</strong>
-                                <span style="color:var(--toss-gray-500);margin-left:8px;">${t.category}</span>
+                        <div class="data-row" style="padding:12px 0;border-bottom:1px solid var(--toss-gray-100);">
+                            <div style="display:flex;align-items:center;gap:10px;">
+                                <span class="badge ${i < 3 ? 'badge-red' : 'badge-blue'}" style="min-width:24px;text-align:center;">${i + 1}</span>
+                                <div>
+                                    <strong style="font-size:14px;">${t.keyword}</strong>
+                                    <div style="font-size:12px;color:var(--toss-gray-500);margin-top:2px;">📂 ${t.category}</div>
+                                </div>
                             </div>
-                            <div>
-                                <span style="color:var(--toss-blue);">${formatNumber(t.searches)}건</span>
-                                <span class="badge ${t.change >= 0 ? 'badge-red' : 'badge-green'}" style="margin-left:8px;">
-                                    ${t.change >= 0 ? '↑' : '↓'}${Math.abs(t.change)}%
-                                </span>
+                            <div style="text-align:right;">
+                                <div style="font-weight:600;color:var(--toss-blue);">${formatNumber(t.searches)}건</div>
+                                <div style="font-size:12px;color:var(--toss-gray-500);">${formatCurrency(t.price)}</div>
                             </div>
                         </div>
                         `).join('')}
                     </div>
-                    ` : '<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-title">트렌드 데이터 없음</div></div>'}
+                    ` : '<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-title">트렌드 데이터 없음</div><div class="empty-desc">데이터 업로드 후 자동 추출됩니다</div></div>'}
                 </div>
             </div>`;
         }
 
         function renderDashboardCharts() {
             const { stats } = analyzeCategories();
-            const cats = Object.keys(stats);
             const ctx = document.getElementById('catChart');
 
-            if (ctx && cats.length > 0) {
+            if (ctx && Object.keys(stats).length > 0) {
+                // 판매금액 기준 정렬 후 TOP 6 + 기타
+                const sorted = Object.entries(stats).sort((a, b) => b[1].sales - a[1].sales);
+                const top6 = sorted.slice(0, 6);
+                const others = sorted.slice(6);
+                const otherSales = others.reduce((sum, [, data]) => sum + data.sales, 0);
+
+                const labels = top6.map(([cat]) => cat.length > 10 ? cat.substring(0, 10) + '...' : cat);
+                const data = top6.map(([, d]) => d.sales);
+
+                if (otherSales > 0) {
+                    labels.push('기타');
+                    data.push(otherSales);
+                }
+
+                // 토스 스타일 블루 계열 그라데이션 색상
+                const colors = [
+                    '#3182F6', // 토스 블루
+                    '#4A9CFF', // 밝은 블루
+                    '#6BB3FF', // 더 밝은 블루
+                    '#8ECAFF', // 연한 블루
+                    '#B0DAFF', // 아주 연한 블루
+                    '#D0EAFF', // 매우 연한 블루
+                    '#E8E8E8'  // 기타 (회색)
+                ];
+
                 state.charts.cat = new Chart(ctx, {
                     type: 'doughnut',
                     data: {
-                        labels: cats,
+                        labels: labels,
                         datasets: [{
-                            data: cats.map(c => stats[c].sales),
-                            backgroundColor: ['#3182F6', '#F04452', '#30B06E', '#F59F00', '#8B95A1', '#6B7684'],
-                            borderWidth: 0
+                            data: data,
+                            backgroundColor: colors.slice(0, labels.length),
+                            borderWidth: 2,
+                            borderColor: '#fff'
                         }]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
-                        plugins: { legend: { position: 'bottom' } }
+                        cutout: '55%',
+                        plugins: {
+                            legend: {
+                                position: 'right',
+                                labels: {
+                                    boxWidth: 12,
+                                    padding: 8,
+                                    font: { size: 11 }
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const value = context.raw;
+                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                        const percentage = ((value / total) * 100).toFixed(1);
+                                        return `${context.label}: ¥${value.toLocaleString()} (${percentage}%)`;
+                                    }
+                                }
+                            }
+                        }
                     }
                 });
             }
@@ -942,9 +1295,30 @@
                     <button class="btn btn-secondary btn-sm" id="autoDetectBtn">🔍 자동 감지</button>
                 </div>
                 <p style="color:var(--toss-gray-600);margin-bottom:16px;">엑셀 파일의 컬럼을 분석에 사용할 항목과 연결해주세요:</p>
-                <div class="grid-2" style="gap:16px;">
-                    ${['category', 'sales', 'quantity', 'product'].map(type => {
-                        const labels = { category: '📂 카테고리', sales: '💰 판매금액', quantity: '📦 판매수량', product: '🏷️ 상품명' };
+
+                <!-- 계층적 카테고리 매핑 -->
+                <div style="margin-bottom:16px;">
+                    <label class="form-label" style="font-weight:600;">📂 카테고리 계층 설정</label>
+                    <div class="grid-2" style="gap:12px;">
+                        ${['category1', 'category2', 'category3', 'category4'].map((type, idx) => {
+                            const labels = { category1: '대분류 (Depth 1)', category2: '중분류 (Depth 2)', category3: '소분류 (Depth 3)', category4: '세부분류 (Depth 4)' };
+                            const columns = Object.keys(state.salesData[0]);
+                            return `
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label class="form-label" style="font-size:12px;color:var(--toss-gray-500);">${labels[type]}</label>
+                                <select class="form-input form-select column-select" data-type="${type}">
+                                    <option value="">-- 선택 안함 --</option>
+                                    ${columns.map(col => `<option value="${col}" ${columnMapping[type] === col ? 'selected' : ''}>${col}</option>`).join('')}
+                                </select>
+                            </div>`;
+                        }).join('')}
+                    </div>
+                </div>
+
+                <!-- 기타 컬럼 매핑 -->
+                <div class="grid-2" style="gap:12px;">
+                    ${['sales', 'product', 'date', 'site'].map(type => {
+                        const labels = { sales: '💰 판매금액/상품가', product: '🏷️ 상품명', date: '📅 날짜', site: '🌐 사이트' };
                         const columns = Object.keys(state.salesData[0]);
                         return `
                         <div class="form-group" style="margin-bottom:0;">
@@ -969,9 +1343,12 @@
                 </div>
                 <div class="info-box green">
                     ✅ ${formatNumber(state.salesData.length)}건의 데이터가 업로드되었습니다.
-                    ${columnMapping.category ? `<br>📂 카테고리: <strong>${columnMapping.category}</strong>` : ''}
-                    ${columnMapping.sales ? ` | 💰 금액: <strong>${columnMapping.sales}</strong>` : ''}
-                    ${columnMapping.quantity ? ` | 📦 수량: <strong>${columnMapping.quantity}</strong>` : ''}
+                    ${columnMapping.category1 ? `<br>📂 카테고리1: <strong>${columnMapping.category1}</strong>` : ''}
+                    ${columnMapping.category2 ? ` → ${columnMapping.category2}` : ''}
+                    ${columnMapping.category3 ? ` → ${columnMapping.category3}` : ''}
+                    ${columnMapping.category4 ? ` → ${columnMapping.category4}` : ''}
+                    ${columnMapping.sales ? `<br>💰 금액: <strong>${columnMapping.sales}</strong>` : ''}
+                    ${columnMapping.site ? ` | 🌐 사이트: <strong>${columnMapping.site}</strong>` : ''}
                 </div>
                 <div class="table-wrapper" style="max-height:400px;overflow-y:auto;margin-top:16px;">
                     <table class="table">
@@ -1023,14 +1400,73 @@
                 </div>`;
             }
 
-            const { stats, totalSales, totalQty } = analyzeCategories();
+            // 사용 가능한 월 목록
+            const availableMonths = getAvailableMonths();
+            const filteredData = getFilteredData();
+
+            const analysis = analyzeCategories();
+            const { stats, totalSales, totalQty, avgPrice } = analysis;
             const sortedCats = Object.entries(stats).sort((a, b) => b[1].sales - a[1].sales);
+            const maxSales = sortedCats[0]?.[1]?.sales || 1;
+            const maxQty = Math.max(...sortedCats.map(([_, d]) => d.count)) || 1;
+
+            // 매핑된 카테고리 depth 확인
+            const availableDepths = [];
+            if (columnMapping.category1) availableDepths.push({ depth: 1, label: '대분류', col: columnMapping.category1 });
+            if (columnMapping.category2) availableDepths.push({ depth: 2, label: '중분류', col: columnMapping.category2 });
+            if (columnMapping.category3) availableDepths.push({ depth: 3, label: '소분류', col: columnMapping.category3 });
+            if (columnMapping.category4) availableDepths.push({ depth: 4, label: '세부분류', col: columnMapping.category4 });
+
+            // 월 표시 포맷
+            const formatMonth = (m) => {
+                const [year, month] = m.split('-');
+                return `${year}년 ${parseInt(month)}월`;
+            };
 
             return `
             <div class="page-header">
                 <h1 class="page-title">판매 분석</h1>
-                <p class="page-desc">카테고리별 판매 현황</p>
+                <p class="page-desc">카테고리별 판매 현황 (엔화 기준) - ${selectedMonth ? formatMonth(selectedMonth) : '전체 기간'} ${formatNumber(filteredData.length)}건</p>
             </div>
+
+            <!-- 월별 필터 -->
+            ${availableMonths.length > 0 ? `
+            <div class="card" style="margin-bottom:20px;">
+                <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                    <span style="font-weight:600;color:var(--toss-gray-700);">📅 기간 선택:</span>
+                    <button class="btn ${!selectedMonth ? 'btn-primary' : 'btn-secondary'} btn-sm month-selector" data-month="">
+                        전체 (${formatNumber(state.salesData.length)}건)
+                    </button>
+                    ${availableMonths.map(m => {
+                        const monthData = state.salesData.filter(item => {
+                            let dateVal = columnMapping.date ? item[columnMapping.date] : item['결제일'];
+                            if (!dateVal) return false;
+                            let date = dateVal instanceof Date ? dateVal : new Date(dateVal);
+                            if (isNaN(date.getTime())) return false;
+                            return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}` === m;
+                        });
+                        return `
+                        <button class="btn ${selectedMonth === m ? 'btn-primary' : 'btn-secondary'} btn-sm month-selector" data-month="${m}">
+                            ${parseInt(m.split('-')[1])}월 (${formatNumber(monthData.length)}건)
+                        </button>`;
+                    }).join('')}
+                </div>
+            </div>
+            ` : ''}
+
+            <!-- 카테고리 Depth 선택 -->
+            ${availableDepths.length > 1 ? `
+            <div class="card" style="margin-bottom:20px;">
+                <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+                    <span style="font-weight:600;color:var(--toss-gray-700);">📂 분석 기준:</span>
+                    ${availableDepths.map(d => `
+                        <button class="btn ${analysisCategoryDepth === d.depth ? 'btn-primary' : 'btn-secondary'} btn-sm depth-selector" data-depth="${d.depth}">
+                            ${d.label}
+                        </button>
+                    `).join('')}
+                </div>
+            </div>
+            ` : ''}
 
             <div class="stats-grid">
                 <div class="stat-card">
@@ -1038,11 +1474,11 @@
                     <div class="stat-value blue">${formatCurrency(totalSales)}</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-label">총 판매수량</div>
-                    <div class="stat-value">${formatNumber(totalQty)}개</div>
+                    <div class="stat-label">총 거래건수</div>
+                    <div class="stat-value">${formatNumber(totalQty)}건</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-label">평균 객단가</div>
+                    <div class="stat-label">평균 거래금액</div>
                     <div class="stat-value">${formatCurrency(totalQty > 0 ? Math.round(totalSales / totalQty) : 0)}</div>
                 </div>
                 <div class="stat-card">
@@ -1051,75 +1487,230 @@
                 </div>
             </div>
 
-            <div class="grid-2">
-                <div class="card">
-                    <div class="card-header"><h3 class="card-title">카테고리별 판매금액</h3></div>
-                    <div class="chart-container"><canvas id="salesPieChart"></canvas></div>
+            <!-- 카테고리별 총 판매금액 (가로 막대) -->
+            <div class="card">
+                <div class="card-header"><h3 class="card-title">📊 카테고리별 총 판매금액</h3></div>
+                ${sortedCats.slice(0, 10).map(([cat, data], i) => `
+                <div style="margin-bottom:16px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <span class="badge ${i < 3 ? 'badge-red' : 'badge-blue'}" style="min-width:24px;text-align:center;">${i + 1}</span>
+                            <strong style="font-size:14px;">${cat}</strong>
+                        </div>
+                        <span style="font-size:14px;font-weight:600;color:var(--toss-blue);">${formatCurrency(data.sales)}</span>
+                    </div>
+                    <div style="background:var(--toss-gray-100);border-radius:6px;height:24px;overflow:hidden;">
+                        <div style="background:linear-gradient(90deg, #3182F6, #60A5FA);height:100%;width:${Math.round(data.sales/maxSales*100)}%;border-radius:6px;display:flex;align-items:center;justify-content:flex-end;padding-right:8px;">
+                            <span style="color:white;font-size:11px;font-weight:600;">${data.ratio}%</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="card">
-                    <div class="card-header"><h3 class="card-title">카테고리별 판매수량</h3></div>
-                    <div class="chart-container"><canvas id="qtyBarChart"></canvas></div>
-                </div>
+                `).join('')}
+                ${sortedCats.length > 10 ? `<p style="text-align:center;color:var(--toss-gray-500);padding:8px;">... 외 ${sortedCats.length - 10}개 카테고리</p>` : ''}
             </div>
 
+            <!-- 카테고리별 거래건수 (가로 막대) -->
             <div class="card">
-                <div class="card-header"><h3 class="card-title">카테고리별 상세</h3></div>
-                <table class="table">
-                    <thead><tr><th>순위</th><th>카테고리</th><th>판매금액</th><th>비중</th><th>판매수량</th></tr></thead>
-                    <tbody>
-                        ${sortedCats.map(([cat, data], i) => `
-                        <tr>
-                            <td><span class="badge ${i < 3 ? 'badge-red' : 'badge-blue'}">${i + 1}</span></td>
-                            <td><strong>${cat}</strong></td>
-                            <td>${formatCurrency(data.sales)}</td>
-                            <td>
-                                <div style="display:flex;align-items:center;gap:8px;">
-                                    <div class="progress-bar" style="flex:1;"><div class="progress-fill" style="width:${data.ratio}%;"></div></div>
-                                    <span style="min-width:45px;">${data.ratio}%</span>
-                                </div>
-                            </td>
-                            <td>${formatNumber(data.quantity)}개</td>
-                        </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
+                <div class="card-header"><h3 class="card-title">📦 카테고리별 거래건수</h3></div>
+                ${sortedCats.slice(0, 10).map(([cat, data], i) => `
+                <div style="margin-bottom:16px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <span class="badge ${i < 3 ? 'badge-red' : 'badge-blue'}" style="min-width:24px;text-align:center;">${i + 1}</span>
+                            <strong style="font-size:14px;">${cat}</strong>
+                        </div>
+                        <span style="font-size:14px;font-weight:600;color:var(--toss-green);">${formatNumber(data.count)}건</span>
+                    </div>
+                    <div style="background:var(--toss-gray-100);border-radius:6px;height:24px;overflow:hidden;">
+                        <div style="background:linear-gradient(90deg, #30B06E, #4ADE80);height:100%;width:${Math.round(data.count/Math.max(...sortedCats.map(([_,d])=>d.count))*100)}%;border-radius:6px;"></div>
+                    </div>
+                </div>
+                `).join('')}
+            </div>
+
+            <!-- 판매금액 비율 파이 차트 -->
+            <div class="card">
+                <div class="card-header"><h3 class="card-title">🥧 판매금액 비율</h3></div>
+                <div class="chart-container" style="height:350px;"><canvas id="salesPieChart"></canvas></div>
+            </div>
+
+            <!-- 거래건수 바 차트 (전체 너비) -->
+            <div class="card">
+                <div class="card-header"><h3 class="card-title">📈 카테고리별 거래건수</h3></div>
+                <div class="chart-container" style="height:400px;"><canvas id="qtyBarChart"></canvas></div>
+            </div>
+
+            <!-- 카테고리별 상세 테이블 -->
+            <div class="card">
+                <div class="card-header"><h3 class="card-title">📋 카테고리별 상세</h3></div>
+                <div style="overflow-x:auto;">
+                    <table class="table">
+                        <thead><tr><th>순위</th><th>카테고리</th><th>총 판매금액</th><th>평균 금액</th><th>비중</th><th>거래건수</th></tr></thead>
+                        <tbody>
+                            ${sortedCats.map(([cat, data], i) => `
+                            <tr>
+                                <td><span class="badge ${i < 3 ? 'badge-red' : 'badge-blue'}">${i + 1}</span></td>
+                                <td><strong>${cat}</strong></td>
+                                <td style="text-align:right;font-weight:600;color:var(--toss-blue);">${formatCurrency(data.sales)}</td>
+                                <td style="text-align:right;">${formatCurrency(data.count > 0 ? Math.round(data.sales / data.count) : 0)}</td>
+                                <td>
+                                    <div style="display:flex;align-items:center;gap:8px;">
+                                        <div class="progress-bar" style="flex:1;height:8px;"><div class="progress-fill" style="width:${parseFloat(data.ratio)}%;"></div></div>
+                                        <span style="min-width:50px;text-align:right;">${data.ratio}%</span>
+                                    </div>
+                                </td>
+                                <td style="text-align:right;">${formatNumber(data.count)}건</td>
+                            </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
             </div>`;
         }
 
         function renderAnalysisCharts() {
-            const { stats } = analyzeCategories();
-            const cats = Object.keys(stats);
+            const { stats, totalSales } = analyzeCategories();
+            const allCats = Object.keys(stats);
+
+            // 차트 색상 팔레트 (10개 - 깔끔하게)
+            const chartColors = [
+                '#3182F6', '#F04452', '#30B06E', '#F59F00', '#8B5CF6',
+                '#EC4899', '#06B6D4', '#F97316', '#6366F1', '#8B95A1'
+            ];
+
+            // TOP 8 + 기타로 정리
+            const sortedCats = allCats.sort((a, b) => stats[b].sales - stats[a].sales);
+            const top8 = sortedCats.slice(0, 8);
+            const otherCats = sortedCats.slice(8);
+            const otherTotal = otherCats.reduce((sum, c) => sum + stats[c].sales, 0);
+
+            const pieLabels = otherCats.length > 0 ? [...top8, `기타 (${otherCats.length}개)`] : top8;
+            const pieData = otherCats.length > 0
+                ? [...top8.map(c => stats[c].sales), otherTotal]
+                : top8.map(c => stats[c].sales);
 
             const pieCtx = document.getElementById('salesPieChart');
-            if (pieCtx && cats.length > 0) {
+            if (pieCtx && pieLabels.length > 0) {
                 state.charts.pie = new Chart(pieCtx, {
-                    type: 'pie',
+                    type: 'doughnut',
                     data: {
-                        labels: cats,
+                        labels: pieLabels,
                         datasets: [{
-                            data: cats.map(c => stats[c].sales),
-                            backgroundColor: ['#3182F6', '#F04452', '#30B06E', '#F59F00', '#8B95A1', '#6B7684'],
-                            borderWidth: 0
+                            data: pieData,
+                            backgroundColor: pieLabels.map((_, i) => chartColors[i % chartColors.length]),
+                            borderWidth: 3,
+                            borderColor: '#fff',
+                            hoverOffset: 8
                         }]
                     },
-                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '40%',
+                        plugins: {
+                            legend: {
+                                position: 'right',
+                                labels: {
+                                    padding: 12,
+                                    usePointStyle: true,
+                                    pointStyle: 'circle',
+                                    font: { size: 13, weight: '500' },
+                                    generateLabels: function(chart) {
+                                        const data = chart.data;
+                                        return data.labels.map((label, i) => {
+                                            const value = data.datasets[0].data[i];
+                                            const percent = totalSales > 0 ? ((value / totalSales) * 100).toFixed(1) : 0;
+                                            const shortLabel = label.length > 10 ? label.substring(0, 10) + '..' : label;
+                                            return {
+                                                text: `${shortLabel}  ${percent}%`,
+                                                fillStyle: data.datasets[0].backgroundColor[i],
+                                                hidden: false,
+                                                index: i
+                                            };
+                                        });
+                                    }
+                                }
+                            },
+                            tooltip: {
+                                backgroundColor: 'rgba(0,0,0,0.8)',
+                                titleFont: { size: 14, weight: 'bold' },
+                                bodyFont: { size: 13 },
+                                padding: 12,
+                                callbacks: {
+                                    label: function(context) {
+                                        const value = context.raw;
+                                        const percent = totalSales > 0 ? ((value / totalSales) * 100).toFixed(1) : 0;
+                                        return ` ${formatCurrency(value)} (${percent}%)`;
+                                    }
+                                }
+                            }
+                        }
+                    }
                 });
             }
 
+            // 바 차트: TOP 10만 표시
             const barCtx = document.getElementById('qtyBarChart');
-            if (barCtx && cats.length > 0) {
+            const top10Cats = sortedCats.slice(0, 10);
+
+            if (barCtx && top10Cats.length > 0) {
                 state.charts.bar = new Chart(barCtx, {
                     type: 'bar',
                     data: {
-                        labels: cats,
+                        labels: top10Cats.map(c => c.length > 15 ? c.substring(0, 15) + '...' : c),
                         datasets: [{
-                            label: '판매수량',
-                            data: cats.map(c => stats[c].quantity),
-                            backgroundColor: '#3182F6',
-                            borderRadius: 8
+                            label: '거래건수',
+                            data: top10Cats.map(c => stats[c].count),
+                            backgroundColor: top10Cats.map((_, i) => chartColors[i % chartColors.length]),
+                            borderRadius: 6,
+                            barThickness: 35
                         }]
                     },
-                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                backgroundColor: 'rgba(0,0,0,0.8)',
+                                titleFont: { size: 14, weight: 'bold' },
+                                bodyFont: { size: 13 },
+                                padding: 12,
+                                callbacks: {
+                                    title: function(context) {
+                                        return top10Cats[context[0].dataIndex];
+                                    },
+                                    label: function(context) {
+                                        const cat = top10Cats[context.dataIndex];
+                                        return [
+                                            `거래건수: ${formatNumber(context.raw)}건`,
+                                            `판매금액: ${formatCurrency(stats[cat].sales)}`
+                                        ];
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                beginAtZero: true,
+                                grid: { color: 'rgba(0,0,0,0.05)' },
+                                ticks: {
+                                    font: { size: 12 },
+                                    callback: function(value) {
+                                        return formatNumber(value) + '건';
+                                    }
+                                }
+                            },
+                            y: {
+                                grid: { display: false },
+                                ticks: {
+                                    font: { size: 13, weight: '500' },
+                                    padding: 8
+                                }
+                            }
+                        }
+                    }
                 });
             }
         }
@@ -1128,38 +1719,146 @@
         // 트렌드 관리
         // ============================================
         function renderTrends() {
+            const hasData = state.salesData && state.salesData.length > 0;
+            const filteredData = getFilteredData();
+            const totalSearches = state.trendData.reduce((sum, t) => sum + t.searches, 0);
+            const totalSales = state.trendData.reduce((sum, t) => sum + (t.price * t.searches), 0);
+            const availableMonths = getAvailableMonths();
+            const periodLabel = selectedMonth ? `${parseInt(selectedMonth.split('-')[1])}월` : '전체';
+
             return `
             <div class="page-header">
                 <h1 class="page-title">트렌드 관리</h1>
-                <p class="page-desc">인기 검색 키워드를 관리합니다</p>
+                <p class="page-desc">실제 주문 데이터 기반 인기 키워드 TOP 30 ${selectedMonth ? `(${periodLabel})` : ''}</p>
             </div>
+
+            <!-- 월별 필터 -->
+            ${hasData && availableMonths.length > 0 ? `
+            <div class="card" style="margin-bottom:20px;padding:16px;">
+                <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                    <span style="font-weight:600;color:var(--toss-gray-700);">📅 기간 선택:</span>
+                    <button class="btn ${!selectedMonth ? 'btn-primary' : 'btn-secondary'} btn-sm month-selector" data-month="">
+                        전체 (${formatNumber(state.salesData.length)}건)
+                    </button>
+                    ${availableMonths.map(m => {
+                        const monthData = state.salesData.filter(item => {
+                            const dateCol = columnMapping.date;
+                            let dateVal = dateCol ? item[dateCol] : item['결제일'];
+                            if (!dateVal) return false;
+                            let date;
+                            if (dateVal instanceof Date) date = dateVal;
+                            else if (typeof dateVal === 'number') date = new Date((dateVal - 25569) * 86400 * 1000);
+                            else if (typeof dateVal === 'string') date = new Date(dateVal);
+                            if (date && !isNaN(date.getTime())) {
+                                const monthKey = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0');
+                                return monthKey === m;
+                            }
+                            return false;
+                        });
+                        return '<button class="btn ' + (selectedMonth === m ? 'btn-primary' : 'btn-secondary') + ' btn-sm month-selector" data-month="' + m + '">' +
+                            parseInt(m.split('-')[1]) + '월 (' + formatNumber(monthData.length) + '건)</button>';
+                    }).join('')}
+                </div>
+            </div>
+            ` : ''}
+
+            <!-- 트렌드 요약 -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">트렌드 키워드 (${periodLabel})</div>
+                    <div class="stat-value blue">${state.trendData.length}개</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">총 거래건수</div>
+                    <div class="stat-value">${formatNumber(totalSearches)}건</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">추정 거래금액</div>
+                    <div class="stat-value">${formatCurrency(totalSales)}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">분석 데이터</div>
+                    <div class="stat-value ${hasData ? 'green' : 'red'}">${hasData ? formatNumber(filteredData.length) + '건' : '없음'}</div>
+                </div>
+            </div>
+
+            <!-- 트렌드 재추출 -->
+            <div class="card" style="margin-bottom:20px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+                    <div>
+                        <span style="font-weight:600;color:var(--toss-gray-700);">📊 트렌드 키워드 (실제 데이터 기반)</span>
+                        <p style="color:var(--toss-gray-500);font-size:13px;margin:4px 0 0 0;">카테고리 세부분류(Depth 4) 기준 거래건수 TOP 30</p>
+                    </div>
+                    <div style="display:flex;gap:8px;">
+                        <button class="btn btn-secondary btn-sm" id="refreshTrendBtn" ${!hasData ? 'disabled' : ''}>
+                            🔄 트렌드 재추출
+                        </button>
+                        <button class="btn btn-primary btn-sm" id="addTrendBtn">+ 수동 추가</button>
+                    </div>
+                </div>
+            </div>
+
+            ${!hasData ? `
+            <div class="info-box yellow" style="margin-bottom:20px;">
+                ⚠️ 트렌드 분석을 위해 먼저 <button style="color:var(--toss-blue);background:none;border:none;cursor:pointer;text-decoration:underline;" data-page="upload">데이터를 업로드</button>해주세요.
+                현재 표시된 데이터는 샘플입니다.
+            </div>
+            ` : ''}
 
             <div class="card">
                 <div class="card-header">
-                    <h3 class="card-title">트렌드 키워드 (${state.trendData.length}개)</h3>
-                    <button class="btn btn-primary btn-sm" id="addTrendBtn">+ 추가</button>
+                    <h3 class="card-title">🔥 TOP ${state.trendData.length} 인기 키워드</h3>
+                    <span class="badge badge-blue">${hasData ? '실제 데이터' : '샘플 데이터'}</span>
                 </div>
 
                 ${state.trendData.length > 0 ? `
-                <table class="table">
-                    <thead><tr><th>순위</th><th>키워드</th><th>카테고리</th><th>검색량</th><th>변화율</th><th>관리</th></tr></thead>
-                    <tbody>
-                        ${state.trendData.map((t, i) => `
-                        <tr>
-                            <td><span class="badge ${i < 3 ? 'badge-red' : 'badge-blue'}">${i + 1}</span></td>
-                            <td><strong>${t.keyword}</strong></td>
-                            <td>${t.category}</td>
-                            <td>${formatNumber(t.searches)}건</td>
-                            <td><span class="badge ${t.change >= 0 ? 'badge-red' : 'badge-green'}">${t.change >= 0 ? '↑' : '↓'}${Math.abs(t.change)}%</span></td>
-                            <td>
-                                <button class="btn btn-secondary btn-sm edit-trend" data-id="${t.id}">수정</button>
-                                <button class="btn btn-danger btn-sm delete-trend" data-id="${t.id}">삭제</button>
-                            </td>
-                        </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-                ` : '<div class="empty-state"><div class="empty-icon">🔥</div><div class="empty-title">트렌드 데이터 없음</div></div>'}
+                <div style="overflow-x:auto;">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th style="width:60px;">순위</th>
+                                <th>키워드 (세부분류)</th>
+                                <th>상위 카테고리</th>
+                                <th style="text-align:right;">거래건수</th>
+                                <th style="text-align:right;">평균 단가</th>
+                                <th style="text-align:right;">비중</th>
+                                <th style="width:80px;">관리</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${state.trendData.map((t, i) => {
+                                const ratio = totalSearches > 0 ? ((t.searches / totalSearches) * 100).toFixed(1) : 0;
+                                return `
+                                <tr>
+                                    <td>
+                                        <span class="badge ${i < 3 ? 'badge-red' : i < 10 ? 'badge-blue' : ''}" style="min-width:28px;text-align:center;">
+                                            ${i + 1}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <strong style="font-size:14px;">${t.keyword}</strong>
+                                        ${t.change > 20 ? '<span style="color:var(--toss-red);margin-left:4px;">🔥</span>' : ''}
+                                    </td>
+                                    <td style="color:var(--toss-gray-600);">${t.category}</td>
+                                    <td style="text-align:right;font-weight:600;color:var(--toss-blue);">${formatNumber(t.searches)}건</td>
+                                    <td style="text-align:right;">${formatCurrency(t.price)}</td>
+                                    <td style="text-align:right;">
+                                        <div style="display:flex;align-items:center;gap:6px;justify-content:flex-end;">
+                                            <div style="width:60px;height:6px;background:var(--toss-gray-100);border-radius:3px;overflow:hidden;">
+                                                <div style="height:100%;width:${Math.min(ratio * 3, 100)}%;background:linear-gradient(90deg,#3182F6,#60A5FA);border-radius:3px;"></div>
+                                            </div>
+                                            <span style="min-width:40px;font-size:12px;">${ratio}%</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-danger btn-sm delete-trend" data-id="${t.id}" style="padding:4px 8px;font-size:11px;">삭제</button>
+                                    </td>
+                                </tr>`;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+                ` : '<div class="empty-state"><div class="empty-icon">🔥</div><div class="empty-title">트렌드 데이터 없음</div><div class="empty-desc">데이터를 업로드하면 자동으로 추출됩니다</div></div>'}
             </div>`;
         }
 
@@ -1167,55 +1866,119 @@
         // 뉴스레터
         // ============================================
         function renderNewsletter() {
-            const hasApiKey = state.geminiApiKey.length > 10;
+            const hasGeminiKey = state.geminiApiKey.length > 10;
+            const hasStibeeKey = state.stibeeApiKey.length > 10;
+            const today = new Date();
+            const dateStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
 
             return `
             <div class="page-header">
-                <h1 class="page-title">뉴스레터</h1>
-                <p class="page-desc">AI로 뉴스레터 콘텐츠를 생성합니다</p>
+                <h1 class="page-title">뉴스레터 생성</h1>
+                <p class="page-desc">비드바이 주간 트렌드 뉴스레터를 생성하고 발송합니다</p>
             </div>
 
-            ${!hasApiKey ? `
+            ${!hasGeminiKey ? `
             <div class="info-box yellow">
                 ⚠️ AI 콘텐츠 생성을 위해 <button style="color:var(--toss-blue);background:none;border:none;cursor:pointer;text-decoration:underline;" data-page="settings">설정</button>에서 Gemini API 키를 먼저 등록해주세요.
             </div>
             ` : ''}
 
             <div class="grid-2">
-                <div class="card">
-                    <div class="card-header"><h3 class="card-title">AI 콘텐츠 생성</h3></div>
-                    <div class="form-group">
-                        <label class="form-label">콘텐츠 유형</label>
-                        <select id="contentType" class="form-input form-select">
-                            <option value="newsletter">📧 뉴스레터</option>
-                            <option value="blog">📝 블로그 포스트</option>
-                            <option value="sns">📱 SNS 포스트</option>
-                        </select>
+                <!-- 좌측: 설정 패널 -->
+                <div>
+                    <div class="card">
+                        <div class="card-header"><h3 class="card-title">📧 뉴스레터 설정</h3></div>
+
+                        <div class="form-group">
+                            <label class="form-label">뉴스레터 제목</label>
+                            <input type="text" id="newsletterTitle" class="form-input"
+                                   value="비드바이 주간 트렌드 | ${state.weekInfo.month}월 ${state.weekInfo.week}주차" placeholder="뉴스레터 제목">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">표시할 키워드 수</label>
+                            <select id="keywordCount" class="form-input form-select">
+                                <option value="10">TOP 10</option>
+                                <option value="20">TOP 20</option>
+                                <option value="30" selected>TOP 30</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">콘텐츠 섹션 선택</label>
+                            <div style="display:flex;flex-direction:column;gap:8px;">
+                                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                                    <input type="checkbox" id="secTrend" checked> 🔥 인기 검색어 TOP 10
+                                </label>
+                                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                                    <input type="checkbox" id="secCategory" checked> 📦 카테고리별 인기도
+                                </label>
+                                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                                    <input type="checkbox" id="secAnalysis" checked> 💡 이번 주 트렌드 분석 (AI)
+                                </label>
+                                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                                    <input type="checkbox" id="secPromo" checked> 🎯 프로모션 배너
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="info-box blue">
+                            📊 현재 ${state.trendData.length}개 트렌드 키워드 보유 중
+                        </div>
+
+                        <button class="btn btn-primary" style="width:100%;" id="generateNewsletterBtn" ${!hasGeminiKey ? 'disabled' : ''}>
+                            ${state.isGenerating ? '⏳ 생성 중...' : '✨ 뉴스레터 생성하기'}
+                        </button>
                     </div>
-                    <div class="info-box blue">
-                        💡 ${state.trendData.length}개 트렌드 키워드 기반으로 콘텐츠를 생성합니다.
+
+                    <!-- 발송 설정 -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">📤 스티비 발송 설정</h3>
+                            <span class="badge ${hasStibeeKey ? 'badge-green' : 'badge-red'}">${hasStibeeKey ? '연결됨' : '미연결'}</span>
+                        </div>
+
+                        ${!hasStibeeKey ? `
+                        <div class="info-box yellow" style="margin-bottom:16px;">
+                            ⚠️ 이메일 발송을 위해 설정에서 스티비 API를 연결해주세요.
+                        </div>
+                        ` : `
+                        <div class="info-box green" style="margin-bottom:16px;">
+                            ✅ 스티비 API 연결됨 (주소록 ID: ${state.stibeeListId || '미설정'})
+                        </div>
+                        `}
+
+                        <div style="display:flex;gap:8px;">
+                            <button class="btn btn-secondary" style="flex:1;" id="previewEmailBtn" ${!state.newsletterHtml ? 'disabled' : ''}>
+                                👁️ 미리보기
+                            </button>
+                            <button class="btn btn-primary" style="flex:1;" id="sendStibeeBtn" ${!hasStibeeKey || !state.newsletterHtml ? 'disabled' : ''}>
+                                📧 스티비로 발송
+                            </button>
+                        </div>
                     </div>
-                    <button class="btn btn-primary" style="width:100%;" id="generateBtn" ${!hasApiKey ? 'disabled' : ''}>
-                        ${state.isGenerating ? '⏳ 생성 중...' : '✨ AI 콘텐츠 생성'}
-                    </button>
                 </div>
 
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">생성된 콘텐츠</h3>
-                        <button class="btn btn-secondary btn-sm" id="copyContentBtn">📋 복사</button>
+                <!-- 우측: 뉴스레터 미리보기 -->
+                <div class="card" style="padding:0;overflow:hidden;">
+                    <div style="background:var(--toss-gray-100);padding:12px 16px;border-bottom:1px solid var(--toss-gray-200);display:flex;justify-content:space-between;align-items:center;">
+                        <span style="font-weight:600;font-size:14px;">📧 뉴스레터 미리보기</span>
+                        <div style="display:flex;gap:8px;">
+                            <button class="btn btn-secondary btn-sm" id="copyHtmlBtn" ${!state.newsletterHtml ? 'disabled' : ''}>HTML 복사</button>
+                            <button class="btn btn-secondary btn-sm" id="downloadHtmlBtn" ${!state.newsletterHtml ? 'disabled' : ''}>다운로드</button>
+                        </div>
                     </div>
-                    <div style="background:var(--toss-gray-900);border-radius:12px;padding:20px;min-height:300px;">
-                        <pre id="generatedContent" style="color:white;font-size:14px;white-space:pre-wrap;line-height:1.8;font-family:inherit;">${state.generatedContent || '왼쪽에서 콘텐츠 유형을 선택하고\n"AI 콘텐츠 생성" 버튼을 클릭하세요.'}</pre>
+                    <div id="newsletterPreview" style="background:#f5f5f5;min-height:600px;max-height:800px;overflow-y:auto;">
+                        ${state.newsletterHtml || generateDefaultPreview()}
                     </div>
                 </div>
             </div>
 
             <div class="card">
-                <div class="card-header"><h3 class="card-title">발송 내역</h3></div>
+                <div class="card-header"><h3 class="card-title">📋 발송 내역</h3></div>
                 ${state.newsletters.length > 0 ? `
                 <table class="table">
-                    <thead><tr><th>제목</th><th>발송일</th><th>수신자</th><th>상태</th></tr></thead>
+                    <thead><tr><th>제목</th><th>발송일</th><th>수신자</th><th>상태</th><th>관리</th></tr></thead>
                     <tbody>
                         ${state.newsletters.map(n => `
                         <tr>
@@ -1223,12 +1986,146 @@
                             <td>${n.sentAt}</td>
                             <td>${n.recipients}명</td>
                             <td><span class="badge badge-green">발송완료</span></td>
+                            <td><button class="btn btn-secondary btn-sm view-newsletter" data-id="${n.id}">보기</button></td>
                         </tr>
                         `).join('')}
                     </tbody>
                 </table>
-                ` : '<div class="empty-state"><div class="empty-icon">✉️</div><div class="empty-title">발송 내역 없음</div></div>'}
+                ` : '<div class="empty-state"><div class="empty-icon">✉️</div><div class="empty-title">발송 내역 없음</div><div class="empty-desc">뉴스레터를 생성하고 발송해보세요</div></div>'}
             </div>`;
+        }
+
+        // 기본 미리보기 템플릿
+        function generateDefaultPreview() {
+            return `
+            <div style="max-width:600px;margin:0 auto;background:white;font-family:-apple-system,BlinkMacSystemFont,'Pretendard',sans-serif;">
+                <div style="background:linear-gradient(135deg,#F04452 0%,#FF6B6B 100%);padding:32px;text-align:center;">
+                    <div style="font-size:24px;font-weight:700;color:white;margin-bottom:8px;">🛒 비드바이 주간 트렌드</div>
+                    <div style="font-size:14px;color:rgba(255,255,255,0.9);">${new Date().toLocaleDateString('ko-KR')} 기준 | 20년 데이터 기반 분석</div>
+                </div>
+                <div style="padding:32px;text-align:center;color:#666;">
+                    <div style="font-size:48px;margin-bottom:16px;">📧</div>
+                    <div style="font-size:18px;font-weight:600;color:#333;margin-bottom:8px;">뉴스레터 미리보기</div>
+                    <div style="font-size:14px;">왼쪽에서 설정 후 "뉴스레터 생성하기" 버튼을 클릭하세요</div>
+                </div>
+            </div>`;
+        }
+
+        // 뉴스레터 HTML 생성
+        function generateNewsletterHtml(aiAnalysis = '') {
+            const today = new Date();
+            const dateStr = today.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+            const keywordCount = parseInt(document.getElementById('keywordCount')?.value || 10);
+            const topKeywords = [...state.trendData].sort((a,b) => b.searches - a.searches).slice(0, keywordCount);
+            const top10 = topKeywords.slice(0, 10);
+
+            // 카테고리별 집계
+            const categoryStats = {};
+            state.trendData.forEach(t => {
+                if (!categoryStats[t.category]) categoryStats[t.category] = 0;
+                categoryStats[t.category] += t.searches;
+            });
+            const sortedCategories = Object.entries(categoryStats).sort((a,b) => b[1] - a[1]).slice(0, 5);
+            const maxCatValue = sortedCategories[0]?.[1] || 1;
+
+            // 급상승 키워드 (change > 20%)
+            const hotKeywords = topKeywords.filter(t => t.change > 20).slice(0, 3);
+
+            const secTrend = document.getElementById('secTrend')?.checked !== false;
+            const secCategory = document.getElementById('secCategory')?.checked !== false;
+            const secAnalysis = document.getElementById('secAnalysis')?.checked !== false;
+            const secPromo = document.getElementById('secPromo')?.checked !== false;
+
+            return `
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:-apple-system,BlinkMacSystemFont,'Pretendard','Malgun Gothic',sans-serif;">
+<div style="max-width:600px;margin:0 auto;background:white;">
+    <!-- 헤더 -->
+    <div style="background:linear-gradient(135deg,#F04452 0%,#FF6B6B 100%);padding:32px 24px;text-align:center;">
+        <div style="font-size:12px;color:rgba(255,255,255,0.8);margin-bottom:8px;">🛒 비드바이 주간 트렌드</div>
+        <div style="font-size:14px;color:rgba(255,255,255,0.9);margin-bottom:16px;">${dateStr} 기준 | 20년 데이터 기반 분석</div>
+        <div style="background:rgba(255,255,255,0.2);border-radius:12px;padding:16px;margin-top:8px;">
+            <div style="font-size:12px;color:rgba(255,255,255,0.9);margin-bottom:4px;">🔥 이번 주 검색 1위</div>
+            <div style="font-size:28px;font-weight:700;color:white;">${top10[0]?.keyword || '데이터 없음'}</div>
+            <div style="font-size:14px;color:rgba(255,255,255,0.9);margin-top:4px;">${formatNumber(top10[0]?.searches || 0)}건 검색</div>
+        </div>
+    </div>
+
+    ${secTrend ? `
+    <!-- 인기 검색어 TOP 10 -->
+    <div style="padding:24px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+            <span style="font-size:18px;">☑️</span>
+            <span style="font-size:18px;font-weight:700;color:#333;">인기 검색어 TOP 10</span>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:14px;">
+            <tr style="background:#f8f9fa;"><th style="padding:12px;text-align:left;border-bottom:2px solid #dee2e6;">순위</th><th style="padding:12px;text-align:left;border-bottom:2px solid #dee2e6;">키워드</th><th style="padding:12px;text-align:right;border-bottom:2px solid #dee2e6;">검색량</th></tr>
+            ${top10.map((t, i) => `
+            <tr style="border-bottom:1px solid #eee;">
+                <td style="padding:12px;"><span style="display:inline-block;width:24px;height:24px;background:${i < 3 ? '#F04452' : '#3182F6'};color:white;border-radius:50%;text-align:center;line-height:24px;font-size:12px;font-weight:600;">${i+1}</span></td>
+                <td style="padding:12px;font-weight:${i < 3 ? '600' : '400'};">${t.keyword} ${t.change > 20 ? '<span style="color:#F04452;">🔥</span>' : t.change > 0 ? '<span style="color:#30B06E;">☑️</span>' : ''}</td>
+                <td style="padding:12px;text-align:right;color:#666;">${formatNumber(t.searches)}건</td>
+            </tr>`).join('')}
+        </table>
+    </div>
+    ` : ''}
+
+    ${secCategory ? `
+    <!-- 카테고리별 인기도 -->
+    <div style="padding:24px;background:#f8f9fa;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+            <span style="font-size:18px;">📦</span>
+            <span style="font-size:18px;font-weight:700;color:#333;">카테고리별 인기도</span>
+        </div>
+        ${sortedCategories.map(([cat, val]) => `
+        <div style="margin-bottom:12px;">
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                <span style="font-size:14px;color:#333;">${cat}</span>
+                <span style="font-size:14px;color:#666;">${formatNumber(val)}</span>
+            </div>
+            <div style="background:#e0e0e0;border-radius:4px;height:8px;overflow:hidden;">
+                <div style="background:linear-gradient(90deg,#30B06E,#4ADE80);height:100%;width:${Math.round(val/maxCatValue*100)}%;border-radius:4px;"></div>
+            </div>
+        </div>`).join('')}
+    </div>
+    ` : ''}
+
+    ${secAnalysis && aiAnalysis ? `
+    <!-- AI 트렌드 분석 -->
+    <div style="padding:24px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+            <span style="font-size:18px;">💡</span>
+            <span style="font-size:18px;font-weight:700;color:#333;">이번 주 트렌드 분석</span>
+        </div>
+        <div style="background:#FFF9E6;border-left:4px solid #F59F00;padding:16px;border-radius:0 8px 8px 0;line-height:1.8;font-size:14px;color:#333;">
+            ${aiAnalysis.replace(/\n/g, '<br>')}
+        </div>
+    </div>
+    ` : ''}
+
+    ${secPromo ? `
+    <!-- 프로모션 배너 -->
+    <div style="padding:24px;background:linear-gradient(135deg,#EDE9FE,#FBE7F3);">
+        <div style="text-align:center;">
+            <div style="font-size:14px;color:#7C3AED;margin-bottom:8px;">💜 비드바이 셀렉트</div>
+            <div style="font-size:20px;font-weight:700;color:#333;margin-bottom:8px;">20년간의 데이터를 바탕으로 엄선한<br>인기 상품들을 만나보세요!</div>
+            <a href="https://bidbuy.co.kr" style="display:inline-block;background:#7C3AED;color:white;padding:12px 32px;border-radius:24px;text-decoration:none;font-weight:600;margin-top:12px;">🛒 인기 상품 바로 보기</a>
+            <div style="font-size:12px;color:#666;margin-top:12px;">비드바이 셀렉트에서 확인하세요</div>
+        </div>
+    </div>
+    ` : ''}
+
+    <!-- 푸터 -->
+    <div style="padding:24px;background:#333;text-align:center;">
+        <div style="color:white;font-weight:600;margin-bottom:8px;">비드바이코리아 | 20년 전통 일본 구매대행</div>
+        <div style="color:#999;font-size:12px;">본 메일은 정보 제공 목적으로 발송되었습니다.</div>
+        <div style="color:#666;font-size:11px;margin-top:12px;">수신거부 | 문의하기</div>
+    </div>
+</div>
+</body>
+</html>`;
         }
 
         // ============================================
@@ -1335,10 +2232,116 @@
             </div>
 
             <div class="card" style="max-width:640px;">
-                <div class="card-header"><h3 class="card-title">💾 데이터 관리</h3></div>
-                <div style="display:flex;gap:12px;">
-                    <button class="btn btn-secondary" id="exportBtn" style="flex:1;">📥 백업 다운로드</button>
-                    <button class="btn btn-danger" id="resetBtn" style="flex:1;">🗑️ 전체 초기화</button>
+                <div class="card-header">
+                    <h3 class="card-title">📧 스티비 이메일 API 설정</h3>
+                    <span class="badge ${state.stibeeApiKey.length > 10 ? 'badge-green' : 'badge-red'}">${state.stibeeApiKey.length > 10 ? '연결됨' : '미연결'}</span>
+                </div>
+
+                <div class="info-box blue">
+                    <strong>이메일 대량 발송</strong>을 위해 스티비(Stibee) API 키가 필요합니다.
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">스티비 API 키</label>
+                    <div style="display:flex;gap:8px;">
+                        <input type="${state.showStibeeKey ? 'text' : 'password'}" id="stibeeKeyInput" class="form-input"
+                               value="${state.stibeeApiKey}" placeholder="API 키 입력..." style="flex:1;">
+                        <button class="btn btn-secondary" id="toggleStibeeKeyBtn">${state.showStibeeKey ? '숨기기' : '보기'}</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">주소록 ID (listId)</label>
+                    <input type="text" id="stibeeListInput" class="form-input"
+                           value="${state.stibeeListId}" placeholder="주소록 ID (URL에서 확인)">
+                </div>
+
+                <div style="display:flex;gap:12px;margin-bottom:20px;">
+                    <button class="btn btn-primary" id="saveStibeeBtn" style="flex:1;">💾 저장</button>
+                    <button class="btn btn-secondary" id="testStibeeBtn" style="flex:1;">🔍 연결 테스트</button>
+                </div>
+
+                <div style="background:var(--toss-gray-50);padding:16px;border-radius:12px;">
+                    <p style="font-weight:600;margin-bottom:12px;">📋 스티비 API 설정 방법</p>
+                    <ol style="font-size:14px;color:var(--toss-gray-600);line-height:2;padding-left:20px;">
+                        <li><a href="https://stibee.com" target="_blank" style="color:var(--toss-blue);">스티비</a> 로그인</li>
+                        <li>워크스페이스 설정 → API 키 → 새로 만들기</li>
+                        <li>주소록 URL에서 lists/ 뒤 숫자가 주소록 ID</li>
+                        <li>생성된 값들을 위에 입력</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="card" style="max-width:640px;">
+                <div class="card-header">
+                    <h3 class="card-title">💾 데이터 관리</h3>
+                </div>
+
+                <!-- 현재 데이터 현황 -->
+                <div style="background:var(--toss-gray-50);padding:16px;border-radius:12px;margin-bottom:20px;">
+                    <p style="font-weight:600;margin-bottom:12px;">📊 현재 저장된 데이터</p>
+                    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;font-size:14px;">
+                        <div style="display:flex;justify-content:space-between;">
+                            <span style="color:var(--toss-gray-600);">판매 데이터</span>
+                            <strong>${state.salesData.length > 0 ? formatNumber(state.salesData.length) + '건' : '없음'}</strong>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;">
+                            <span style="color:var(--toss-gray-600);">트렌드 키워드</span>
+                            <strong>${state.trendData.length > 0 ? state.trendData.length + '개' : '없음'}</strong>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;">
+                            <span style="color:var(--toss-gray-600);">컬럼 매핑</span>
+                            <strong>${columnMapping.category1 ? '설정됨' : '미설정'}</strong>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;">
+                            <span style="color:var(--toss-gray-600);">API 키</span>
+                            <strong>${state.geminiApiKey.length > 10 ? '저장됨' : '미저장'}</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 데이터 백업 -->
+                <div style="border:1px solid var(--toss-gray-200);border-radius:12px;padding:16px;margin-bottom:16px;">
+                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+                        <span style="font-size:24px;">📥</span>
+                        <div>
+                            <p style="font-weight:600;margin:0;">데이터 백업</p>
+                            <p style="font-size:13px;color:var(--toss-gray-500);margin:4px 0 0 0;">판매 데이터, 트렌드, 설정을 JSON 파일로 저장합니다</p>
+                        </div>
+                    </div>
+                    <button class="btn btn-secondary" id="exportBtn" style="width:100%;">💾 백업 파일 다운로드</button>
+                </div>
+
+                <!-- 데이터 복원 -->
+                <div style="border:1px solid var(--toss-gray-200);border-radius:12px;padding:16px;margin-bottom:16px;">
+                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+                        <span style="font-size:24px;">📤</span>
+                        <div>
+                            <p style="font-weight:600;margin:0;">데이터 복원</p>
+                            <p style="font-size:13px;color:var(--toss-gray-500);margin:4px 0 0 0;">백업 파일에서 데이터를 복원합니다</p>
+                        </div>
+                    </div>
+                    <input type="file" id="importFileInput" accept=".json" style="display:none;">
+                    <button class="btn btn-secondary" id="importBtn" style="width:100%;">📂 백업 파일 불러오기</button>
+                </div>
+
+                <!-- 데이터 초기화 (위험) -->
+                <div style="border:2px solid var(--toss-red);border-radius:12px;padding:16px;background:rgba(240,68,82,0.05);">
+                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+                        <span style="font-size:24px;">⚠️</span>
+                        <div>
+                            <p style="font-weight:600;margin:0;color:var(--toss-red);">데이터 전체 초기화</p>
+                            <p style="font-size:13px;color:var(--toss-gray-600);margin:4px 0 0 0;">모든 데이터가 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다.</p>
+                        </div>
+                    </div>
+                    <div class="info-box yellow" style="margin-bottom:12px;padding:12px;">
+                        <strong>삭제되는 항목:</strong><br>
+                        • 업로드된 판매 데이터 (${formatNumber(state.salesData.length)}건)<br>
+                        • 트렌드 키워드 (${state.trendData.length}개)<br>
+                        • 컬럼 매핑 설정<br>
+                        • 생성된 뉴스레터
+                    </div>
+                    <button class="btn btn-danger" id="resetBtn" style="width:100%;">🗑️ 모든 데이터 삭제</button>
                 </div>
             </div>`;
         }
@@ -1403,6 +2406,95 @@
                 showToast('분석 페이지로 이동합니다');
             });
 
+            // 카테고리 Depth 선택 (분석 페이지)
+            document.querySelectorAll('.depth-selector').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const newDepth = parseInt(btn.dataset.depth);
+                    analysisCategoryDepth = newDepth;
+                    window._analyzedOnce = false; // 디버그 로그 재활성화
+                    console.log('📊 분석 Depth 변경:', newDepth);
+                    render();
+                    showToast(`분석 기준이 Depth ${newDepth}로 변경되었습니다`, 'success');
+                });
+            });
+
+            // 월별 필터 선택
+            document.querySelectorAll('.month-selector').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const month = btn.dataset.month;
+                    selectedMonth = month || null;
+                    window._analyzedOnce = false;
+                    console.log('📅 월별 필터 변경:', selectedMonth || '전체');
+
+                    // 월 변경 시 트렌드 데이터도 재추출
+                    if (state.salesData && state.salesData.length > 0) {
+                        const extractedTrends = extractTrendFromData();
+                        if (extractedTrends.length > 0) {
+                            state.trendData = extractedTrends;
+                        }
+                    }
+
+                    render();
+                    const monthLabel = selectedMonth ? `${parseInt(selectedMonth.split('-')[1])}월` : '전체 기간';
+                    showToast(`${monthLabel} 데이터로 분석합니다`, 'success');
+                });
+            });
+
+            // 데이터 초기화 버튼
+            document.getElementById('resetDataBtn')?.addEventListener('click', async () => {
+                if (confirm('모든 데이터를 초기화하시겠습니까?\n\n• 업로드된 판매 데이터\n• 트렌드 데이터\n• 컬럼 매핑 설정\n\n이 모두 삭제됩니다.')) {
+                    try {
+                        // IndexedDB 데이터 삭제
+                        await saveSalesData([]);
+                        state.salesData = [];
+
+                        // 트렌드 데이터 초기화
+                        state.trendData = [];
+                        localStorage.removeItem('bidbuy_trends');
+
+                        // 컬럼 매핑 초기화
+                        columnMapping = { product: null, category: null, sales: null, site: null, date: null, category1: null, category2: null, category3: null, category4: null };
+                        localStorage.removeItem('bidbuy_column_mapping');
+
+                        // 월별 필터 초기화
+                        selectedMonth = null;
+                        window._analyzedOnce = false;
+
+                        render();
+                        showToast('✅ 모든 데이터가 초기화되었습니다', 'success');
+                    } catch (err) {
+                        console.error('초기화 오류:', err);
+                        showToast('초기화 중 오류가 발생했습니다', 'error');
+                    }
+                }
+            });
+
+            // 트렌드 전체보기 링크
+            document.querySelectorAll('.trend-link').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    state.currentPage = 'trends';
+                    render();
+                });
+            });
+
+            // 트렌드 재추출 버튼
+            document.getElementById('refreshTrendBtn')?.addEventListener('click', () => {
+                if (state.salesData && state.salesData.length > 0) {
+                    const extractedTrends = extractTrendFromData();
+                    if (extractedTrends.length > 0) {
+                        state.trendData = extractedTrends;
+                        localStorage.setItem('bidbuy_trends', JSON.stringify(state.trendData));
+                        render();
+                        showToast(`✅ TOP ${extractedTrends.length} 트렌드 키워드가 재추출되었습니다!`, 'success');
+                    } else {
+                        showToast('트렌드 추출에 실패했습니다. 카테고리 매핑을 확인해주세요.', 'error');
+                    }
+                } else {
+                    showToast('데이터가 없습니다. 먼저 엑셀 파일을 업로드해주세요.', 'error');
+                }
+            });
+
             // 컬럼 매핑 저장
             document.getElementById('saveColumnMappingBtn')?.addEventListener('click', () => {
                 document.querySelectorAll('.column-select').forEach(select => {
@@ -1410,6 +2502,16 @@
                     columnMapping[type] = select.value || null;
                 });
                 localStorage.setItem('bidbuy_column_mapping', JSON.stringify(columnMapping));
+
+                // 매핑 저장 후 트렌드도 재추출
+                if (state.salesData && state.salesData.length > 0) {
+                    const extractedTrends = extractTrendFromData();
+                    if (extractedTrends.length > 0) {
+                        state.trendData = extractedTrends;
+                        localStorage.setItem('bidbuy_trends', JSON.stringify(state.trendData));
+                    }
+                }
+
                 showToast('✅ 컬럼 매핑이 저장되었습니다!', 'success');
                 state.currentPage = 'analysis';
                 render();
@@ -1419,6 +2521,15 @@
             document.getElementById('autoDetectBtn')?.addEventListener('click', () => {
                 if (state.salesData.length > 0) {
                     detectColumns(state.salesData);
+
+                    // 자동 감지 후 트렌드도 재추출
+                    const extractedTrends = extractTrendFromData();
+                    if (extractedTrends.length > 0) {
+                        state.trendData = extractedTrends;
+                        localStorage.setItem('bidbuy_trends', JSON.stringify(state.trendData));
+                        console.log('✅ 자동 감지 후 트렌드 추출:', extractedTrends.length, '개');
+                    }
+
                     render();
                     showToast('✅ 컬럼이 자동 감지되었습니다!', 'success');
                 }
@@ -1512,6 +2623,180 @@
                 }
             });
 
+            // ========== 새 뉴스레터 시스템 ==========
+
+            // 뉴스레터 생성
+            document.getElementById('generateNewsletterBtn')?.addEventListener('click', async () => {
+                // 실제 데이터에서 트렌드 재추출 (데이터가 있으면)
+                if (state.salesData && state.salesData.length > 0) {
+                    const extractedTrends = extractTrendFromData();
+                    if (extractedTrends.length > 0) {
+                        state.trendData = extractedTrends;
+                        localStorage.setItem('bidbuy_trends', JSON.stringify(state.trendData));
+                        console.log('📊 뉴스레터용 트렌드 추출:', extractedTrends.length, '개');
+                    }
+                }
+
+                if (!state.trendData || state.trendData.length === 0) {
+                    showToast('데이터가 없습니다. 먼저 엑셀 파일을 업로드해주세요.', 'error');
+                    return;
+                }
+
+                state.isGenerating = true;
+                render();
+
+                try {
+                    // AI 트렌드 분석 생성
+                    const secAnalysis = document.getElementById('secAnalysis')?.checked;
+                    let aiAnalysis = '';
+
+                    // 실제 카테고리별 데이터 분석 결과 가져오기
+                    const analysis = analyzeCategories(1); // depth 1 (대분류)
+                    const topCategories = Object.entries(analysis.stats)
+                        .sort((a, b) => b[1].sales - a[1].sales)
+                        .slice(0, 5)
+                        .map(([cat, data]) => `${cat}: ${formatCurrency(data.sales)} (${data.count}건)`);
+
+                    if (secAnalysis && state.geminiApiKey) {
+                        // 트렌드 데이터 수에 따라 분석할 개수 결정
+                        const trendCount = state.trendData.length;
+                        const topTrends = state.trendData.slice(0, Math.min(trendCount, 30));
+
+                        // TOP 1~3 상세 분석용 데이터
+                        const top3 = topTrends.slice(0, 3);
+                        // TOP 4~10 요약
+                        const top4to10 = topTrends.slice(3, 10);
+                        // 그 이후 키워드들
+                        const restTrends = topTrends.slice(10);
+
+                        // 가격대 분포 분석
+                        const priceRanges = {
+                            under10k: topTrends.filter(t => t.price < 10000).length,
+                            '10kTo20k': topTrends.filter(t => t.price >= 10000 && t.price < 20000).length,
+                            over20k: topTrends.filter(t => t.price >= 20000).length
+                        };
+
+                        // 면세한도(15만엔) 관련 분석
+                        const dutyFreeLimit = 150000; // 면세 한도
+                        const avgPrice = analysis.avgPrice;
+                        const itemsPerDutyFree = avgPrice > 0 ? Math.floor(dutyFreeLimit / avgPrice) : 0;
+
+                        const prompt = `당신은 비드바이코리아의 일본 구매대행/경매대행 전문 에디터입니다.
+에이블리, 아무드 같은 커머스 뉴스레터 스타일로 친근하면서도 전문적인 트렌드 분석을 작성해주세요.
+
+===== 실제 주문 데이터 분석 결과 =====
+
+📊 이번 기간 거래 현황:
+- 분석 기간: ${selectedMonth ? parseInt(selectedMonth.split('-')[1]) + '월' : '전체 기간'}
+- 총 거래건수: ${formatNumber(analysis.totalQty)}건
+- 총 거래금액: ${formatCurrency(analysis.totalSales)}
+- 평균 단가: ${formatCurrency(analysis.avgPrice)} (면세 한도 15만엔 기준 약 ${itemsPerDutyFree}개 구매 가능)
+
+🏆 TOP 3 인기 키워드 (집중 분석 필요):
+${top3.map((t, i) => `${i+1}위. "${t.keyword}"
+   - 상위 카테고리: ${t.category}
+   - 거래건수: ${t.searches}건
+   - 평균단가: ${formatCurrency(t.price)}`).join('\n')}
+
+📈 TOP 4~10 주요 키워드:
+${top4to10.map((t, i) => `${i+4}위. ${t.keyword} (${t.category}) - ${t.searches}건, ${formatCurrency(t.price)}`).join('\n')}
+
+${restTrends.length > 0 ? `📋 기타 인기 키워드 (11~${10 + restTrends.length}위):
+${restTrends.map((t, i) => `${i+11}위. ${t.keyword} (${t.category})`).join(', ')}` : ''}
+
+💰 가격대 분포:
+- 1만엔 미만: ${priceRanges.under10k}개 키워드
+- 1~2만엔대: ${priceRanges['10kTo20k']}개 키워드
+- 2만엔 이상: ${priceRanges.over20k}개 키워드
+
+📦 카테고리별 판매 TOP 5:
+${topCategories.join('\n')}
+
+===== 작성 요청사항 =====
+
+다음 형식으로 뉴스레터 트렌드 분석을 작성해주세요:
+
+1. **인사말 & 핵심 인사이트** (2-3문장)
+   - "${top3[0]?.category || '인기 카테고리'}" 카테고리가 1위인 이유를 데이터로 설명
+   - 이번 기간 특징적인 트렌드 요약
+
+2. **TOP 3 키워드 심층 분석** (각 키워드당 2-3문장)
+   - 각 키워드의 일본어 원어가 있다면 한글로 설명 (예: "フィギュア(피규어)" → "피규어는...")
+   - 해당 제품이 인기 있는 이유
+   - 평균 단가 대비 구매 포인트 (면세 한도 고려)
+
+3. **주목할 만한 트렌드** (3-4문장)
+   - 가격대별 인기 제품 분석
+   - 카테고리 간 연관성이나 시즈널 트렌드
+
+4. **구매 꿀팁** (2-3문장)
+   - 평균 단가 ${formatCurrency(analysis.avgPrice)} 기준 면세 한도 내 구매 전략
+   - 비드바이 이용 추천
+
+⚠️ 중요 주의사항:
+- 반드시 위 실제 데이터에 기반해서 작성 (없는 내용 창작 금지)
+- 일본어 키워드는 한글 발음과 뜻을 병기 (예: "玩具(간구/장난감)")
+- "中国、韓半島" 같은 어색한 번역은 "중국, 한국" 또는 원래 의미에 맞게 자연스럽게 수정
+- 이모지는 사용하지 않음
+- 전문적이면서도 친근한 어조
+- 총 15~20문장 분량`;
+
+                        aiAnalysis = await callGemini(prompt) || '';
+                    }
+
+                    // HTML 뉴스레터 생성
+                    state.newsletterHtml = generateNewsletterHtml(aiAnalysis);
+                    state.generatedContent = aiAnalysis;
+                    showToast('✅ 뉴스레터가 생성되었습니다! (TOP ' + state.trendData.length + ' 키워드 기반)', 'success');
+                } catch (err) {
+                    console.error('뉴스레터 생성 오류:', err);
+                    showToast('생성 오류: ' + err.message, 'error');
+                }
+
+                state.isGenerating = false;
+                render();
+            });
+
+            // HTML 복사
+            document.getElementById('copyHtmlBtn')?.addEventListener('click', () => {
+                if (state.newsletterHtml) {
+                    navigator.clipboard.writeText(state.newsletterHtml);
+                    showToast('HTML이 클립보드에 복사되었습니다', 'success');
+                }
+            });
+
+            // HTML 다운로드
+            document.getElementById('downloadHtmlBtn')?.addEventListener('click', () => {
+                if (state.newsletterHtml) {
+                    const blob = new Blob([state.newsletterHtml], { type: 'text/html' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `newsletter_${new Date().toISOString().split('T')[0]}.html`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    showToast('HTML 파일이 다운로드되었습니다', 'success');
+                }
+            });
+
+            // 미리보기
+            document.getElementById('previewEmailBtn')?.addEventListener('click', () => {
+                if (state.newsletterHtml) {
+                    const win = window.open('', '_blank');
+                    win.document.write(state.newsletterHtml);
+                    win.document.close();
+                }
+            });
+
+            // 스티비로 발송 (CORS 문제로 실제 발송은 서버 필요)
+            document.getElementById('sendStibeeBtn')?.addEventListener('click', () => {
+                if (!state.stibeeApiKey || !state.stibeeListId) {
+                    showToast('스티비 API 설정을 먼저 완료해주세요', 'error');
+                    return;
+                }
+                showToast('⚠️ 스티비 발송은 서버 환경이 필요합니다. HTML을 복사하여 스티비에서 직접 사용해주세요.', 'error');
+            });
+
             // 구독자 추가
             document.getElementById('addSubscriberBtn')?.addEventListener('click', () => {
                 const email = prompt('이메일:');
@@ -1580,7 +2865,7 @@
 
                 showToast('연결 테스트 중...');
                 try {
-                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`, {
+                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ contents: [{ parts: [{ text: '테스트' }] }], generationConfig: { maxOutputTokens: 10 } })
@@ -1600,22 +2885,188 @@
                 }
             });
 
-            // 백업
+            // ========== 스티비 API 설정 ==========
+
+            // 스티비 API 저장
+            document.getElementById('saveStibeeBtn')?.addEventListener('click', () => {
+                const key = document.getElementById('stibeeKeyInput')?.value.trim();
+                const listId = document.getElementById('stibeeListInput')?.value.trim();
+
+                if (!key) {
+                    showToast('스티비 API 키를 입력해주세요', 'error');
+                    return;
+                }
+
+                state.stibeeApiKey = key;
+                state.stibeeListId = listId;
+                localStorage.setItem('bidbuy_stibee_key', key);
+                localStorage.setItem('bidbuy_stibee_list', listId);
+                showToast('✅ 스티비 API 설정이 저장되었습니다!', 'success');
+                render();
+            });
+
+            // 스티비 API 키 토글
+            document.getElementById('toggleStibeeKeyBtn')?.addEventListener('click', () => {
+                state.showStibeeKey = !state.showStibeeKey;
+                render();
+            });
+
+            // 스티비 연결 테스트
+            document.getElementById('testStibeeBtn')?.addEventListener('click', async () => {
+                const key = document.getElementById('stibeeKeyInput')?.value;
+                if (!key) {
+                    showToast('스티비 API 키를 입력해주세요', 'error');
+                    return;
+                }
+                showToast('⚠️ 스티비 API 테스트는 CORS 정책으로 인해 브라우저에서 직접 불가능합니다. 서버 환경에서 테스트해주세요.', 'error');
+            });
+
+            // 백업 다운로드
             document.getElementById('exportBtn')?.addEventListener('click', () => {
-                const data = { salesData: state.salesData, trendData: state.trendData, newsletters: state.newsletters, subscribers: state.subscribers };
-                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const backupData = {
+                    version: '1.0',
+                    exportDate: new Date().toISOString(),
+                    salesData: state.salesData,
+                    trendData: state.trendData,
+                    columnMapping: columnMapping,
+                    newsletters: state.newsletters,
+                    subscribers: state.subscribers,
+                    settings: {
+                        geminiApiKey: state.geminiApiKey,
+                        stibeeApiKey: state.stibeeApiKey,
+                        stibeeListId: state.stibeeListId
+                    }
+                };
+                const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
                 const a = document.createElement('a');
                 a.href = URL.createObjectURL(blob);
                 a.download = `bidbuy_backup_${new Date().toISOString().split('T')[0]}.json`;
                 a.click();
-                showToast('백업 파일 다운로드');
+                URL.revokeObjectURL(a.href);
+                showToast(`✅ 백업 완료! (판매데이터 ${formatNumber(state.salesData.length)}건, 트렌드 ${state.trendData.length}개)`, 'success');
             });
 
-            // 초기화
-            document.getElementById('resetBtn')?.addEventListener('click', () => {
-                if (confirm('모든 데이터를 삭제하시겠습니까?')) {
-                    localStorage.clear();
-                    location.reload();
+            // 백업 파일 복원
+            document.getElementById('importBtn')?.addEventListener('click', () => {
+                document.getElementById('importFileInput')?.click();
+            });
+
+            document.getElementById('importFileInput')?.addEventListener('change', async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                try {
+                    const text = await file.text();
+                    const backupData = JSON.parse(text);
+
+                    // 백업 파일 유효성 검사
+                    if (!backupData.salesData && !backupData.trendData) {
+                        showToast('유효하지 않은 백업 파일입니다', 'error');
+                        return;
+                    }
+
+                    const confirmMsg = `백업 파일을 복원하시겠습니까?\n\n` +
+                        `📅 백업 날짜: ${backupData.exportDate ? new Date(backupData.exportDate).toLocaleString() : '알 수 없음'}\n` +
+                        `📦 판매 데이터: ${backupData.salesData?.length || 0}건\n` +
+                        `🔥 트렌드 키워드: ${backupData.trendData?.length || 0}개\n\n` +
+                        `⚠️ 현재 데이터는 덮어쓰기됩니다.`;
+
+                    if (!confirm(confirmMsg)) return;
+
+                    // 데이터 복원
+                    if (backupData.salesData) {
+                        state.salesData = backupData.salesData;
+                        await saveSalesData(state.salesData);
+                    }
+                    if (backupData.trendData) {
+                        state.trendData = backupData.trendData;
+                        localStorage.setItem('bidbuy_trends', JSON.stringify(state.trendData));
+                    }
+                    if (backupData.columnMapping) {
+                        columnMapping = backupData.columnMapping;
+                        localStorage.setItem('bidbuy_column_mapping', JSON.stringify(columnMapping));
+                    }
+                    if (backupData.newsletters) {
+                        state.newsletters = backupData.newsletters;
+                        localStorage.setItem('bidbuy_newsletters', JSON.stringify(state.newsletters));
+                    }
+                    if (backupData.settings) {
+                        if (backupData.settings.geminiApiKey) {
+                            state.geminiApiKey = backupData.settings.geminiApiKey;
+                            localStorage.setItem('bidbuy_gemini_key', state.geminiApiKey);
+                        }
+                        if (backupData.settings.stibeeApiKey) {
+                            state.stibeeApiKey = backupData.settings.stibeeApiKey;
+                            localStorage.setItem('bidbuy_stibee_key', state.stibeeApiKey);
+                        }
+                        if (backupData.settings.stibeeListId) {
+                            state.stibeeListId = backupData.settings.stibeeListId;
+                            localStorage.setItem('bidbuy_stibee_list', state.stibeeListId);
+                        }
+                    }
+
+                    window._analyzedOnce = false;
+                    render();
+                    showToast(`✅ 복원 완료! (판매데이터 ${formatNumber(state.salesData.length)}건, 트렌드 ${state.trendData.length}개)`, 'success');
+                } catch (err) {
+                    console.error('복원 오류:', err);
+                    showToast('백업 파일 복원 중 오류가 발생했습니다: ' + err.message, 'error');
+                }
+
+                // 파일 입력 초기화
+                e.target.value = '';
+            });
+
+            // 전체 초기화
+            document.getElementById('resetBtn')?.addEventListener('click', async () => {
+                const confirmMsg = `⚠️ 정말로 모든 데이터를 삭제하시겠습니까?\n\n` +
+                    `삭제될 항목:\n` +
+                    `• 판매 데이터: ${formatNumber(state.salesData.length)}건\n` +
+                    `• 트렌드 키워드: ${state.trendData.length}개\n` +
+                    `• 컬럼 매핑 설정\n` +
+                    `• 생성된 뉴스레터\n` +
+                    `• API 키 설정\n\n` +
+                    `❌ 이 작업은 되돌릴 수 없습니다!`;
+
+                if (!confirm(confirmMsg)) return;
+
+                // 2차 확인
+                const doubleConfirm = prompt('삭제를 확인하려면 "삭제"를 입력하세요:');
+                if (doubleConfirm !== '삭제') {
+                    showToast('초기화가 취소되었습니다', 'success');
+                    return;
+                }
+
+                try {
+                    // IndexedDB 삭제
+                    await saveSalesData([]);
+
+                    // LocalStorage 전체 삭제
+                    localStorage.removeItem('bidbuy_trends');
+                    localStorage.removeItem('bidbuy_column_mapping');
+                    localStorage.removeItem('bidbuy_newsletters');
+                    localStorage.removeItem('bidbuy_gemini_key');
+                    localStorage.removeItem('bidbuy_stibee_key');
+                    localStorage.removeItem('bidbuy_stibee_list');
+
+                    // State 초기화
+                    state.salesData = [];
+                    state.trendData = [];
+                    state.newsletters = [];
+                    state.newsletterHtml = '';
+                    state.generatedContent = '';
+                    state.geminiApiKey = '';
+                    state.stibeeApiKey = '';
+                    state.stibeeListId = '';
+                    columnMapping = { product: null, category: null, sales: null, site: null, date: null, category1: null, category2: null, category3: null, category4: null };
+                    selectedMonth = null;
+
+                    showToast('✅ 모든 데이터가 삭제되었습니다', 'success');
+                    window._analyzedOnce = false;
+                    render();
+                } catch (err) {
+                    console.error('초기화 오류:', err);
+                    showToast('초기화 중 오류 발생: ' + err.message, 'error');
                 }
             });
         }
@@ -1680,14 +3131,25 @@
                 // 컬럼 자동 감지
                 detectColumns(data);
 
-                // IndexedDB에 저장 (대용량 지원)
+                // 실제 데이터에서 트렌드 키워드 추출 (TOP 30)
+                console.log('📊 트렌드 키워드 추출 시작...');
+                const extractedTrends = extractTrendFromData();
+                if (extractedTrends.length > 0) {
+                    state.trendData = extractedTrends;
+                    localStorage.setItem('bidbuy_trends', JSON.stringify(state.trendData));
+                    console.log('✅ 트렌드 키워드 추출 완료:', extractedTrends.length, '개');
+                }
+
+                // IndexedDB에 저장 시도 (대용량 지원)
                 try {
-                    await saveSalesData(data);
+                    const savedCount = await saveSalesData(data);
                     saveState(); // 트렌드, 뉴스레터 등 기타 데이터
-                    showToast(`✅ ${formatNumber(data.length)}건 저장 완료!`, 'success');
+                    showToast(`✅ ${formatNumber(savedCount || data.length)}건 저장 완료!`, 'success');
                 } catch (storageErr) {
                     console.error('❌ IndexedDB 저장 실패:', storageErr);
-                    showToast(`⚠️ 저장 실패 - ${storageErr.message}`, 'error');
+                    console.error('에러 상세:', storageErr.name, storageErr.message);
+                    // 저장 실패해도 메모리에는 유지
+                    showToast(`⚠️ 영구 저장 실패 (새로고침 시 사라짐) - 분석은 가능합니다`, 'error');
                 }
 
                 render();
@@ -1801,11 +3263,17 @@ ${dataContext}
                     console.log(`✅ ${formatNumber(salesData.length)}건의 판매 데이터 로드됨`);
 
                     // 컬럼 매핑 확인
-                    if (salesData.length > 0) {
-                        loadColumnMapping();
-                        if (!columnMapping.category && !columnMapping.sales) {
-                            detectColumns(salesData);
-                        }
+                    loadColumnMapping();
+                    if (!columnMapping.category1 && !columnMapping.sales) {
+                        detectColumns(salesData);
+                    }
+
+                    // 실제 데이터 기반 트렌드 추출 (샘플 데이터 대체)
+                    const extractedTrends = extractTrendFromData();
+                    if (extractedTrends.length > 0) {
+                        state.trendData = extractedTrends;
+                        localStorage.setItem('bidbuy_trends', JSON.stringify(state.trendData));
+                        console.log(`✅ 트렌드 키워드 추출 완료: ${extractedTrends.length}개`);
                     }
                 }
             } catch (err) {
