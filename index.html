@@ -7,12 +7,7 @@
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         :root {
             --toss-black: #191F28;
             --toss-gray-900: #333D4B;
@@ -34,406 +29,139 @@
             --toss-yellow: #F59F00;
             --toss-yellow-light: #FFF9E6;
         }
-
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', 'Segoe UI', sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', sans-serif;
             background: var(--toss-gray-50);
             color: var(--toss-black);
             line-height: 1.5;
-            -webkit-font-smoothing: antialiased;
         }
-
-        /* 토스 스타일 네비게이션 */
         .nav {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 56px;
+            position: fixed; top: 0; left: 0; right: 0; height: 56px;
             background: var(--toss-white);
             border-bottom: 1px solid var(--toss-gray-200);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 24px;
-            z-index: 100;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 24px; z-index: 100;
         }
-
-        .nav-logo {
-            font-size: 18px;
-            font-weight: 700;
-            color: var(--toss-black);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .nav-logo span {
-            color: var(--toss-blue);
-        }
-
-        .nav-user {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-
-        .nav-user-name {
-            font-size: 14px;
-            color: var(--toss-gray-700);
-        }
-
+        .nav-logo { font-size: 18px; font-weight: 700; }
+        .nav-logo span { color: var(--toss-blue); }
+        .nav-user { display: flex; align-items: center; gap: 16px; }
         .btn-logout {
-            font-size: 14px;
-            color: var(--toss-gray-600);
-            background: none;
-            border: none;
-            cursor: pointer;
-            transition: color 0.2s;
+            font-size: 14px; color: var(--toss-gray-600);
+            background: none; border: none; cursor: pointer;
         }
-
-        .btn-logout:hover {
-            color: var(--toss-red);
-        }
-
-        /* 사이드바 */
+        .btn-logout:hover { color: var(--toss-red); }
         .sidebar {
-            position: fixed;
-            top: 56px;
-            left: 0;
-            bottom: 0;
-            width: 240px;
+            position: fixed; top: 56px; left: 0; bottom: 0; width: 240px;
             background: var(--toss-white);
             border-right: 1px solid var(--toss-gray-200);
             padding: 24px 0;
-            overflow-y: auto;
         }
-
-        .sidebar-menu {
-            list-style: none;
-        }
-
-        .sidebar-item {
-            margin-bottom: 4px;
-        }
-
+        .sidebar-menu { list-style: none; }
         .sidebar-link {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 12px 24px;
-            font-size: 15px;
-            color: var(--toss-gray-700);
-            text-decoration: none;
-            transition: all 0.15s;
-            cursor: pointer;
-            border: none;
-            background: none;
-            width: 100%;
-            text-align: left;
+            display: flex; align-items: center; gap: 12px;
+            padding: 12px 24px; font-size: 15px; color: var(--toss-gray-700);
+            cursor: pointer; border: none; background: none;
+            width: 100%; text-align: left; transition: all 0.15s;
         }
-
-        .sidebar-link:hover {
-            background: var(--toss-gray-100);
-            color: var(--toss-black);
-        }
-
+        .sidebar-link:hover { background: var(--toss-gray-100); }
         .sidebar-link.active {
             background: var(--toss-blue-light);
-            color: var(--toss-blue);
-            font-weight: 600;
+            color: var(--toss-blue); font-weight: 600;
         }
-
-        .sidebar-icon {
-            width: 20px;
-            height: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        /* 메인 콘텐츠 */
         .main {
-            margin-left: 240px;
-            margin-top: 56px;
-            min-height: calc(100vh - 56px);
-            padding: 32px;
+            margin-left: 240px; margin-top: 56px;
+            min-height: calc(100vh - 56px); padding: 32px;
         }
-
-        /* 페이지 헤더 */
-        .page-header {
-            margin-bottom: 32px;
-        }
-
-        .page-title {
-            font-size: 26px;
-            font-weight: 700;
-            color: var(--toss-black);
-            margin-bottom: 8px;
-        }
-
-        .page-desc {
-            font-size: 15px;
-            color: var(--toss-gray-600);
-        }
-
-        /* 카드 */
+        .page-header { margin-bottom: 32px; }
+        .page-title { font-size: 26px; font-weight: 700; margin-bottom: 8px; }
+        .page-desc { font-size: 15px; color: var(--toss-gray-600); }
         .card {
             background: var(--toss-white);
-            border-radius: 16px;
-            padding: 24px;
+            border-radius: 16px; padding: 24px;
             margin-bottom: 20px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.04);
         }
-
         .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
+            display: flex; justify-content: space-between;
+            align-items: center; margin-bottom: 20px;
         }
-
-        .card-title {
-            font-size: 18px;
-            font-weight: 700;
-            color: var(--toss-black);
-        }
-
-        /* 통계 카드 그리드 */
+        .card-title { font-size: 18px; font-weight: 700; }
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 16px;
-            margin-bottom: 24px;
+            gap: 16px; margin-bottom: 24px;
         }
-
         .stat-card {
             background: var(--toss-white);
-            border-radius: 16px;
-            padding: 24px;
+            border-radius: 16px; padding: 24px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.04);
         }
-
-        .stat-label {
-            font-size: 14px;
-            color: var(--toss-gray-600);
-            margin-bottom: 8px;
-        }
-
-        .stat-value {
-            font-size: 28px;
-            font-weight: 700;
-            color: var(--toss-black);
-        }
-
-        .stat-change {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            font-size: 13px;
-            margin-top: 8px;
-            padding: 4px 8px;
-            border-radius: 6px;
-        }
-
-        .stat-change.up {
-            color: var(--toss-red);
-            background: var(--toss-red-light);
-        }
-
-        .stat-change.down {
-            color: var(--toss-green);
-            background: var(--toss-green-light);
-        }
-
-        /* 버튼 */
+        .stat-label { font-size: 14px; color: var(--toss-gray-600); margin-bottom: 8px; }
+        .stat-value { font-size: 28px; font-weight: 700; }
+        .stat-value.blue { color: var(--toss-blue); }
         .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            padding: 12px 20px;
-            font-size: 15px;
-            font-weight: 600;
-            border-radius: 12px;
-            border: none;
-            cursor: pointer;
-            transition: all 0.15s;
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+            padding: 12px 20px; font-size: 15px; font-weight: 600;
+            border-radius: 12px; border: none; cursor: pointer; transition: all 0.15s;
         }
-
-        .btn-primary {
-            background: var(--toss-blue);
-            color: var(--toss-white);
-        }
-
-        .btn-primary:hover {
-            background: #2272E6;
-        }
-
-        .btn-secondary {
-            background: var(--toss-gray-100);
-            color: var(--toss-gray-700);
-        }
-
-        .btn-secondary:hover {
-            background: var(--toss-gray-200);
-        }
-
-        .btn-ghost {
-            background: transparent;
-            color: var(--toss-gray-600);
-        }
-
-        .btn-ghost:hover {
-            background: var(--toss-gray-100);
-        }
-
-        .btn-sm {
-            padding: 8px 16px;
-            font-size: 14px;
-            border-radius: 8px;
-        }
-
-        /* 파일 업로드 영역 */
+        .btn-primary { background: var(--toss-blue); color: white; }
+        .btn-primary:hover { background: #2272E6; }
+        .btn-primary:disabled { background: var(--toss-gray-300); cursor: not-allowed; }
+        .btn-secondary { background: var(--toss-gray-100); color: var(--toss-gray-700); }
+        .btn-secondary:hover { background: var(--toss-gray-200); }
+        .btn-sm { padding: 8px 16px; font-size: 14px; }
+        .btn-danger { background: var(--toss-red-light); color: var(--toss-red); }
         .upload-zone {
             border: 2px dashed var(--toss-gray-300);
-            border-radius: 16px;
-            padding: 48px;
-            text-align: center;
-            transition: all 0.2s;
-            cursor: pointer;
+            border-radius: 16px; padding: 48px;
+            text-align: center; cursor: pointer; transition: all 0.2s;
         }
-
-        .upload-zone:hover,
-        .upload-zone.dragover {
+        .upload-zone:hover, .upload-zone.dragover {
             border-color: var(--toss-blue);
             background: var(--toss-blue-light);
         }
-
         .upload-icon {
-            width: 64px;
-            height: 64px;
-            margin: 0 auto 16px;
-            background: var(--toss-gray-100);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            width: 64px; height: 64px; margin: 0 auto 16px;
+            background: var(--toss-gray-100); border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
             font-size: 28px;
         }
-
-        .upload-title {
-            font-size: 16px;
-            font-weight: 600;
-            color: var(--toss-black);
-            margin-bottom: 8px;
-        }
-
-        .upload-desc {
-            font-size: 14px;
-            color: var(--toss-gray-600);
-        }
-
-        /* 테이블 */
-        .table-wrapper {
-            overflow-x: auto;
-        }
-
-        .table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
+        .upload-title { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+        .upload-desc { font-size: 14px; color: var(--toss-gray-600); }
+        .table-wrapper { overflow-x: auto; }
+        .table { width: 100%; border-collapse: collapse; }
         .table th {
-            text-align: left;
-            padding: 12px 16px;
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--toss-gray-600);
+            text-align: left; padding: 12px 16px;
+            font-size: 13px; font-weight: 600; color: var(--toss-gray-600);
             background: var(--toss-gray-50);
             border-bottom: 1px solid var(--toss-gray-200);
         }
-
         .table td {
-            padding: 16px;
-            font-size: 14px;
-            color: var(--toss-gray-900);
+            padding: 16px; font-size: 14px;
             border-bottom: 1px solid var(--toss-gray-100);
         }
-
-        .table tr:hover td {
-            background: var(--toss-gray-50);
-        }
-
-        /* 뱃지 */
+        .table tr:hover td { background: var(--toss-gray-50); }
         .badge {
-            display: inline-flex;
-            align-items: center;
-            padding: 4px 10px;
-            font-size: 12px;
-            font-weight: 600;
-            border-radius: 6px;
+            display: inline-flex; padding: 4px 10px;
+            font-size: 12px; font-weight: 600; border-radius: 6px;
         }
-
-        .badge-blue {
-            background: var(--toss-blue-light);
-            color: var(--toss-blue);
-        }
-
-        .badge-green {
-            background: var(--toss-green-light);
-            color: var(--toss-green);
-        }
-
-        .badge-red {
-            background: var(--toss-red-light);
-            color: var(--toss-red);
-        }
-
-        .badge-yellow {
-            background: var(--toss-yellow-light);
-            color: var(--toss-yellow);
-        }
-
-        /* 차트 컨테이너 */
-        .chart-container {
-            position: relative;
-            height: 300px;
-        }
-
-        /* 입력 폼 */
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-label {
-            display: block;
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--toss-gray-700);
-            margin-bottom: 8px;
-        }
-
+        .badge-blue { background: var(--toss-blue-light); color: var(--toss-blue); }
+        .badge-green { background: var(--toss-green-light); color: var(--toss-green); }
+        .badge-red { background: var(--toss-red-light); color: var(--toss-red); }
+        .badge-yellow { background: var(--toss-yellow-light); color: var(--toss-yellow); }
+        .chart-container { position: relative; height: 300px; }
+        .form-group { margin-bottom: 20px; }
+        .form-label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px; }
         .form-input {
-            width: 100%;
-            padding: 14px 16px;
-            font-size: 15px;
+            width: 100%; padding: 14px 16px; font-size: 15px;
             border: 1px solid var(--toss-gray-300);
-            border-radius: 12px;
-            transition: all 0.15s;
-            outline: none;
+            border-radius: 12px; outline: none; transition: all 0.15s;
         }
-
         .form-input:focus {
             border-color: var(--toss-blue);
             box-shadow: 0 0 0 3px var(--toss-blue-light);
         }
-
-        .form-textarea {
-            min-height: 120px;
-            resize: vertical;
-        }
-
+        .form-textarea { min-height: 150px; resize: vertical; font-family: inherit; }
         .form-select {
             appearance: none;
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236B7684' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
@@ -441,303 +169,74 @@
             background-position: right 16px center;
             padding-right: 40px;
         }
-
-        /* 뉴스레터 에디터 */
-        .editor-toolbar {
-            display: flex;
-            gap: 8px;
-            padding: 12px;
-            background: var(--toss-gray-50);
-            border-radius: 12px 12px 0 0;
-            border: 1px solid var(--toss-gray-200);
-            border-bottom: none;
-        }
-
-        .editor-btn {
-            width: 36px;
-            height: 36px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: var(--toss-white);
-            border: 1px solid var(--toss-gray-200);
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.15s;
-        }
-
-        .editor-btn:hover {
-            background: var(--toss-gray-100);
-        }
-
-        .editor-content {
-            min-height: 300px;
-            padding: 20px;
-            border: 1px solid var(--toss-gray-200);
-            border-radius: 0 0 12px 12px;
-            outline: none;
-            font-size: 15px;
-            line-height: 1.8;
-        }
-
-        /* 뉴스레터 미리보기 */
-        .newsletter-preview {
-            background: var(--toss-white);
-            border: 1px solid var(--toss-gray-200);
-            border-radius: 12px;
-            overflow: hidden;
-        }
-
-        .newsletter-header {
-            background: linear-gradient(135deg, var(--toss-blue), #1E6BD6);
-            color: var(--toss-white);
-            padding: 32px;
-            text-align: center;
-        }
-
-        .newsletter-body {
-            padding: 32px;
-        }
-
-        /* 카테고리 칩 */
-        .category-chips {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-bottom: 20px;
-        }
-
-        .chip {
-            padding: 8px 16px;
-            font-size: 14px;
-            font-weight: 500;
-            background: var(--toss-gray-100);
-            border: none;
-            border-radius: 20px;
-            cursor: pointer;
-            transition: all 0.15s;
-        }
-
-        .chip:hover {
-            background: var(--toss-gray-200);
-        }
-
-        .chip.active {
-            background: var(--toss-blue);
-            color: var(--toss-white);
-        }
-
-        /* 로딩 스피너 */
-        .spinner {
-            width: 20px;
-            height: 20px;
-            border: 2px solid var(--toss-gray-200);
-            border-top-color: var(--toss-blue);
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        /* 토스트 */
+        .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+        .empty-state { text-align: center; padding: 60px 20px; }
+        .empty-icon { font-size: 48px; margin-bottom: 16px; }
+        .empty-title { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+        .empty-desc { font-size: 14px; color: var(--toss-gray-600); }
         .toast {
-            position: fixed;
-            bottom: 32px;
-            left: 50%;
+            position: fixed; bottom: 32px; left: 50%;
             transform: translateX(-50%) translateY(100px);
-            background: var(--toss-gray-900);
-            color: var(--toss-white);
-            padding: 16px 24px;
-            border-radius: 12px;
-            font-size: 15px;
-            font-weight: 500;
-            opacity: 0;
-            transition: all 0.3s;
-            z-index: 1000;
+            background: var(--toss-gray-900); color: white;
+            padding: 16px 24px; border-radius: 12px;
+            font-size: 15px; font-weight: 500;
+            opacity: 0; transition: all 0.3s; z-index: 1000;
         }
-
-        .toast.show {
-            transform: translateX(-50%) translateY(0);
-            opacity: 1;
-        }
-
-        /* 모달 */
-        .modal-backdrop {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.4);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 200;
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.2s;
-        }
-
-        .modal-backdrop.show {
-            opacity: 1;
-            visibility: visible;
-        }
-
-        .modal {
-            background: var(--toss-white);
-            border-radius: 20px;
-            width: 100%;
-            max-width: 480px;
-            max-height: 90vh;
-            overflow-y: auto;
-            transform: scale(0.95);
-            transition: all 0.2s;
-        }
-
-        .modal-backdrop.show .modal {
-            transform: scale(1);
-        }
-
-        .modal-header {
-            padding: 24px 24px 0;
-        }
-
-        .modal-title {
-            font-size: 20px;
-            font-weight: 700;
-        }
-
-        .modal-body {
-            padding: 24px;
-        }
-
-        .modal-footer {
-            padding: 0 24px 24px;
-            display: flex;
-            gap: 12px;
-            justify-content: flex-end;
-        }
-
-        /* 로그인 */
+        .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
         .login-container {
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            min-height: 100vh; display: flex;
+            align-items: center; justify-content: center;
             background: linear-gradient(135deg, #f8fafc 0%, #e8f3ff 100%);
         }
-
         .login-card {
-            background: var(--toss-white);
-            border-radius: 24px;
-            padding: 48px;
-            width: 100%;
-            max-width: 400px;
+            background: white; border-radius: 24px;
+            padding: 48px; width: 100%; max-width: 400px;
             box-shadow: 0 4px 24px rgba(0,0,0,0.08);
         }
-
-        .login-logo {
-            text-align: center;
-            margin-bottom: 40px;
+        .login-logo { text-align: center; margin-bottom: 40px; }
+        .login-logo h1 { font-size: 28px; font-weight: 700; }
+        .login-logo h1 span { color: var(--toss-blue); }
+        .login-logo p { color: var(--toss-gray-600); font-size: 14px; margin-top: 8px; }
+        .info-box {
+            padding: 16px 20px; border-radius: 12px;
+            font-size: 14px; line-height: 1.6; margin-bottom: 20px;
         }
-
-        .login-logo h1 {
-            font-size: 28px;
-            font-weight: 700;
+        .info-box.blue { background: var(--toss-blue-light); color: var(--toss-blue); }
+        .info-box.yellow { background: var(--toss-yellow-light); color: #996600; }
+        .info-box.green { background: var(--toss-green-light); color: var(--toss-green); }
+        .progress-bar {
+            height: 8px; background: var(--toss-gray-100);
+            border-radius: 4px; overflow: hidden;
         }
-
-        .login-logo span {
-            color: var(--toss-blue);
+        .progress-fill {
+            height: 100%; background: var(--toss-blue);
+            border-radius: 4px; transition: width 0.3s;
         }
-
-        .login-logo p {
-            color: var(--toss-gray-600);
-            font-size: 14px;
-            margin-top: 8px;
-        }
-
-        /* 그리드 */
-        .grid-2 {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 20px;
-        }
-
-        /* 탭 */
-        .tabs {
-            display: flex;
-            gap: 4px;
-            padding: 4px;
+        .chip {
+            display: inline-flex; padding: 8px 16px;
+            font-size: 14px; font-weight: 500;
             background: var(--toss-gray-100);
-            border-radius: 12px;
-            margin-bottom: 24px;
+            border: none; border-radius: 20px;
+            cursor: pointer; transition: all 0.15s;
         }
-
-        .tab {
-            flex: 1;
-            padding: 12px 16px;
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--toss-gray-600);
-            background: transparent;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.15s;
+        .chip:hover { background: var(--toss-gray-200); }
+        .chip.active { background: var(--toss-blue); color: white; }
+        .data-row {
+            display: flex; justify-content: space-between;
+            padding: 16px 0; border-bottom: 1px solid var(--toss-gray-100);
         }
-
-        .tab:hover {
-            color: var(--toss-gray-900);
-        }
-
-        .tab.active {
-            background: var(--toss-white);
-            color: var(--toss-black);
-            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-        }
-
-        /* 빈 상태 */
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
-        }
-
-        .empty-icon {
-            font-size: 48px;
-            margin-bottom: 16px;
-        }
-
-        .empty-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: var(--toss-black);
-            margin-bottom: 8px;
-        }
-
-        .empty-desc {
-            font-size: 14px;
-            color: var(--toss-gray-600);
-        }
-
-        /* 반응형 */
+        .data-row:last-child { border-bottom: none; }
+        .data-label { color: var(--toss-gray-600); }
+        .data-value { font-weight: 600; }
         @media (max-width: 1024px) {
-            .stats-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
         }
-
         @media (max-width: 768px) {
-            .sidebar {
-                display: none;
-            }
-            .main {
-                margin-left: 0;
-            }
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
+            .sidebar { display: none; }
+            .main { margin-left: 0; }
+            .stats-grid { grid-template-columns: 1fr; }
+            .grid-2, .grid-3 { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -750,63 +249,87 @@
         // 상태 관리
         // ============================================
         const state = {
-            isLoggedIn: localStorage.getItem('isLoggedIn') === 'true',
+            isLoggedIn: localStorage.getItem('bidbuy_logged_in') === 'true',
             currentPage: 'dashboard',
-            salesData: JSON.parse(localStorage.getItem('salesData')) || [],
-            categoryStats: {},
-            trendData: JSON.parse(localStorage.getItem('trendData')) || [],
-            newsletters: JSON.parse(localStorage.getItem('newsletters')) || [],
-            subscribers: JSON.parse(localStorage.getItem('subscribers')) || [
-                { id: 1, email: 'user1@example.com', name: '김철수', subscribed: true, createdAt: '2024-11-01' },
-                { id: 2, email: 'user2@example.com', name: '이영희', subscribed: true, createdAt: '2024-11-05' },
-            ],
-            selectedCategory: 'all',
-            geminiApiKey: localStorage.getItem('gemini_api_key') || '',
-            isGenerating: false,
+            salesData: JSON.parse(localStorage.getItem('bidbuy_sales') || '[]'),
+            trendData: JSON.parse(localStorage.getItem('bidbuy_trends') || '[]'),
+            newsletters: JSON.parse(localStorage.getItem('bidbuy_newsletters') || '[]'),
+            subscribers: JSON.parse(localStorage.getItem('bidbuy_subscribers') || '[]'),
+            geminiApiKey: localStorage.getItem('bidbuy_gemini_key') || '',
             showApiKey: false,
-            weekInfo: { month: new Date().getMonth() + 1, week: Math.ceil(new Date().getDate() / 7) }
+            isGenerating: false,
+            generatedContent: '',
+            weekInfo: { month: new Date().getMonth() + 1, week: Math.ceil(new Date().getDate() / 7) },
+            charts: {}
         };
+
+        // 샘플 데이터 초기화
+        if (state.trendData.length === 0) {
+            state.trendData = [
+                { id: 1, keyword: '미즈노 글러브', category: '야구용품', searches: 347, change: 23, price: 15000 },
+                { id: 2, keyword: '원피스 피규어', category: '피규어', searches: 282, change: 45, price: 8500 },
+                { id: 3, keyword: '아식스 배트', category: '야구용품', searches: 269, change: 12, price: 25000 },
+                { id: 4, keyword: '건담 프라모델', category: '피규어', searches: 228, change: 8, price: 4500 },
+                { id: 5, keyword: '포켓몬 카드', category: '완구', searches: 217, change: 31, price: 3000 },
+            ];
+            saveState();
+        }
+
+        if (state.subscribers.length === 0) {
+            state.subscribers = [
+                { id: 1, email: 'user1@example.com', name: '김철수', subscribed: true, createdAt: '2024-11-01' },
+                { id: 2, email: 'user2@example.com', name: '이영희', subscribed: true, createdAt: '2024-11-15' },
+            ];
+            saveState();
+        }
 
         // ============================================
         // 유틸리티 함수
         // ============================================
-        function showToast(message) {
-            const toast = document.getElementById('toast');
-            toast.textContent = message;
-            toast.classList.add('show');
-            setTimeout(() => toast.classList.remove('show'), 3000);
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 3000);
         }
 
-        function formatNumber(num) {
-            return new Intl.NumberFormat('ko-KR').format(num);
+        function formatNumber(n) {
+            return new Intl.NumberFormat('ko-KR').format(n || 0);
         }
 
-        function formatCurrency(num) {
-            return new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(num);
+        function formatCurrency(n) {
+            return new Intl.NumberFormat('ko-KR').format(n || 0) + '원';
         }
 
         function saveState() {
-            localStorage.setItem('salesData', JSON.stringify(state.salesData));
-            localStorage.setItem('trendData', JSON.stringify(state.trendData));
-            localStorage.setItem('newsletters', JSON.stringify(state.newsletters));
-            localStorage.setItem('subscribers', JSON.stringify(state.subscribers));
+            localStorage.setItem('bidbuy_sales', JSON.stringify(state.salesData));
+            localStorage.setItem('bidbuy_trends', JSON.stringify(state.trendData));
+            localStorage.setItem('bidbuy_newsletters', JSON.stringify(state.newsletters));
+            localStorage.setItem('bidbuy_subscribers', JSON.stringify(state.subscribers));
+        }
+
+        function destroyCharts() {
+            Object.values(state.charts).forEach(chart => {
+                if (chart) chart.destroy();
+            });
+            state.charts = {};
         }
 
         // ============================================
         // 엑셀 파싱
         // ============================================
-        function parseExcel(file) {
+        async function parseExcel(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     try {
                         const data = new Uint8Array(e.target.result);
                         const workbook = XLSX.read(data, { type: 'array' });
-                        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                        const jsonData = XLSX.utils.sheet_to_json(firstSheet);
-                        resolve(jsonData);
-                    } catch (error) {
-                        reject(error);
+                        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const json = XLSX.utils.sheet_to_json(sheet);
+                        resolve(json);
+                    } catch (err) {
+                        reject(err);
                     }
                 };
                 reader.onerror = reject;
@@ -815,50 +338,42 @@
         }
 
         // ============================================
-        // 카테고리별 분석
+        // 카테고리 분석
         // ============================================
-        function analyzeSalesData() {
+        function analyzeCategories() {
             const stats = {};
-            let totalSales = 0;
-            let totalQuantity = 0;
+            let totalSales = 0, totalQty = 0;
 
             state.salesData.forEach(item => {
-                const category = item['카테고리'] || item.category || item.Category || '기타';
+                const cat = item['카테고리'] || item.category || item.Category || '기타';
                 const sales = parseFloat(item['판매금액'] || item.sales || item.Sales || item['금액'] || 0);
-                const quantity = parseInt(item['판매수량'] || item.quantity || item.Quantity || item['수량'] || 1);
+                const qty = parseInt(item['판매수량'] || item.quantity || item.Quantity || item['수량'] || 1);
 
-                if (!stats[category]) {
-                    stats[category] = { sales: 0, quantity: 0, items: [] };
-                }
-
-                stats[category].sales += sales;
-                stats[category].quantity += quantity;
-                stats[category].items.push(item);
+                if (!stats[cat]) stats[cat] = { sales: 0, quantity: 0, count: 0 };
+                stats[cat].sales += sales;
+                stats[cat].quantity += qty;
+                stats[cat].count++;
                 totalSales += sales;
-                totalQuantity += quantity;
+                totalQty += qty;
             });
 
-            // 비율 계산
             Object.keys(stats).forEach(cat => {
-                stats[cat].salesRatio = totalSales > 0 ? (stats[cat].sales / totalSales * 100).toFixed(1) : 0;
-                stats[cat].quantityRatio = totalQuantity > 0 ? (stats[cat].quantity / totalQuantity * 100).toFixed(1) : 0;
+                stats[cat].ratio = totalSales > 0 ? (stats[cat].sales / totalSales * 100).toFixed(1) : 0;
             });
 
-            state.categoryStats = stats;
-            state.totalSales = totalSales;
-            state.totalQuantity = totalQuantity;
+            return { stats, totalSales, totalQty };
         }
 
         // ============================================
         // Gemini API
         // ============================================
-        async function generateWithGemini(prompt) {
+        async function callGemini(prompt) {
             if (!state.geminiApiKey) {
-                showToast('API 키를 설정해주세요');
+                showToast('API 키를 먼저 설정해주세요');
                 return null;
             }
 
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${state.geminiApiKey}`, {
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${state.geminiApiKey}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -867,7 +382,7 @@
                 })
             });
 
-            const data = await response.json();
+            const data = await res.json();
             if (data.candidates?.[0]) {
                 return data.candidates[0].content.parts[0].text;
             }
@@ -878,16 +393,16 @@
         // 렌더링
         // ============================================
         function render() {
+            destroyCharts();
             const app = document.getElementById('app');
             app.innerHTML = state.isLoggedIn ? renderApp() : renderLogin();
             attachEvents();
 
-            if (state.isLoggedIn && state.currentPage === 'dashboard') {
-                setTimeout(renderCharts, 100);
-            }
-            if (state.isLoggedIn && state.currentPage === 'analysis') {
-                setTimeout(renderAnalysisCharts, 100);
-            }
+            // 차트 렌더링
+            setTimeout(() => {
+                if (state.currentPage === 'dashboard') renderDashboardCharts();
+                if (state.currentPage === 'analysis') renderAnalysisCharts();
+            }, 100);
         }
 
         function renderLogin() {
@@ -898,80 +413,53 @@
                         <h1>비드바이<span>코리아</span></h1>
                         <p>판매 분석 & 뉴스레터 시스템</p>
                     </div>
-                    <div class="form-group">
-                        <label class="form-label">아이디</label>
-                        <input type="text" id="loginId" class="form-input" placeholder="admin" autocomplete="off" value="">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">비밀번호</label>
-                        <input type="password" id="loginPw" class="form-input" placeholder="••••••••" autocomplete="new-password" value="">
-                    </div>
-                    <button id="loginBtn" class="btn btn-primary" style="width:100%;margin-top:8px;">로그인</button>
-                    <p style="text-align:center;margin-top:16px;font-size:13px;color:var(--toss-gray-500);">ID: admin / PW: admin123</p>
+                    <form id="loginForm">
+                        <div class="form-group">
+                            <label class="form-label">아이디</label>
+                            <input type="text" id="loginId" class="form-input" placeholder="admin" autocomplete="off">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">비밀번호</label>
+                            <input type="password" id="loginPw" class="form-input" placeholder="비밀번호 입력" autocomplete="new-password">
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="width:100%;margin-top:8px;">로그인</button>
+                    </form>
+                    <p style="text-align:center;margin-top:20px;font-size:13px;color:var(--toss-gray-500);">
+                        테스트 계정: admin / admin123
+                    </p>
                 </div>
             </div>`;
         }
 
         function renderApp() {
+            const menuItems = [
+                { id: 'dashboard', icon: '📊', label: '대시보드' },
+                { id: 'upload', icon: '📤', label: '데이터 업로드' },
+                { id: 'analysis', icon: '📈', label: '판매 분석' },
+                { id: 'trends', icon: '🔥', label: '트렌드 관리' },
+                { id: 'newsletter', icon: '✉️', label: '뉴스레터' },
+                { id: 'subscribers', icon: '👥', label: '구독자 관리' },
+                { id: 'settings', icon: '⚙️', label: '설정' },
+            ];
+
             return `
             <nav class="nav">
                 <div class="nav-logo">비드바이<span>애널리틱스</span></div>
                 <div class="nav-user">
-                    <span class="nav-user-name">관리자님</span>
+                    <span style="font-size:14px;color:var(--toss-gray-700);">관리자님</span>
                     <button class="btn-logout" id="logoutBtn">로그아웃</button>
                 </div>
             </nav>
-
             <aside class="sidebar">
                 <ul class="sidebar-menu">
-                    <li class="sidebar-item">
-                        <button class="sidebar-link ${state.currentPage === 'dashboard' ? 'active' : ''}" data-page="dashboard">
-                            <span class="sidebar-icon">📊</span>
-                            대시보드
-                        </button>
-                    </li>
-                    <li class="sidebar-item">
-                        <button class="sidebar-link ${state.currentPage === 'upload' ? 'active' : ''}" data-page="upload">
-                            <span class="sidebar-icon">📤</span>
-                            데이터 업로드
-                        </button>
-                    </li>
-                    <li class="sidebar-item">
-                        <button class="sidebar-link ${state.currentPage === 'analysis' ? 'active' : ''}" data-page="analysis">
-                            <span class="sidebar-icon">📈</span>
-                            판매 분석
-                        </button>
-                    </li>
-                    <li class="sidebar-item">
-                        <button class="sidebar-link ${state.currentPage === 'trends' ? 'active' : ''}" data-page="trends">
-                            <span class="sidebar-icon">🔥</span>
-                            트렌드 관리
-                        </button>
-                    </li>
-                    <li class="sidebar-item">
-                        <button class="sidebar-link ${state.currentPage === 'newsletter' ? 'active' : ''}" data-page="newsletter">
-                            <span class="sidebar-icon">✉️</span>
-                            뉴스레터
-                        </button>
-                    </li>
-                    <li class="sidebar-item">
-                        <button class="sidebar-link ${state.currentPage === 'subscribers' ? 'active' : ''}" data-page="subscribers">
-                            <span class="sidebar-icon">👥</span>
-                            구독자 관리
-                        </button>
-                    </li>
-                    <li class="sidebar-item">
-                        <button class="sidebar-link ${state.currentPage === 'settings' ? 'active' : ''}" data-page="settings">
-                            <span class="sidebar-icon">⚙️</span>
-                            설정
-                        </button>
-                    </li>
+                    ${menuItems.map(m => `
+                        <li><button class="sidebar-link ${state.currentPage === m.id ? 'active' : ''}" data-page="${m.id}">
+                            <span>${m.icon}</span> ${m.label}
+                        </button></li>
+                    `).join('')}
                 </ul>
             </aside>
-
-            <main class="main">
-                ${renderPage()}
-            </main>`;
+            <main class="main">${renderPage()}</main>`;
         }
 
         function renderPage() {
@@ -987,10 +475,13 @@
             }
         }
 
+        // ============================================
+        // 대시보드
+        // ============================================
         function renderDashboard() {
-            analyzeSalesData();
-            const categories = Object.keys(state.categoryStats);
-            const topCategory = categories.sort((a, b) => state.categoryStats[b].sales - state.categoryStats[a].sales)[0];
+            const { stats, totalSales, totalQty } = analyzeCategories();
+            const catCount = Object.keys(stats).length;
+            const activeSubscribers = state.subscribers.filter(s => s.subscribed).length;
 
             return `
             <div class="page-header">
@@ -1001,84 +492,80 @@
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-label">총 판매금액</div>
-                    <div class="stat-value">${formatCurrency(state.totalSales || 0)}</div>
-                    <span class="stat-change up">↑ 12.5%</span>
+                    <div class="stat-value blue">${formatCurrency(totalSales)}</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-label">총 판매수량</div>
-                    <div class="stat-value">${formatNumber(state.totalQuantity || 0)}개</div>
-                    <span class="stat-change up">↑ 8.3%</span>
+                    <div class="stat-value">${formatNumber(totalQty)}개</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-label">등록 카테고리</div>
-                    <div class="stat-value">${categories.length}개</div>
+                    <div class="stat-label">카테고리</div>
+                    <div class="stat-value">${catCount}개</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-label">구독자 수</div>
-                    <div class="stat-value">${state.subscribers.filter(s => s.subscribed).length}명</div>
-                    <span class="stat-change up">↑ 5명</span>
+                    <div class="stat-label">구독자</div>
+                    <div class="stat-value">${activeSubscribers}명</div>
                 </div>
             </div>
 
             <div class="grid-2">
                 <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">카테고리별 판매 비중</h3>
-                    </div>
-                    <div class="chart-container">
-                        <canvas id="categoryChart"></canvas>
-                    </div>
+                    <div class="card-header"><h3 class="card-title">카테고리별 판매</h3></div>
+                    <div class="chart-container"><canvas id="catChart"></canvas></div>
                 </div>
                 <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">주간 판매 추이</h3>
+                    <div class="card-header"><h3 class="card-title">TOP 5 트렌드</h3></div>
+                    ${state.trendData.length > 0 ? `
+                    <div>
+                        ${state.trendData.slice(0, 5).map((t, i) => `
+                        <div class="data-row">
+                            <div>
+                                <span class="badge ${i < 3 ? 'badge-red' : 'badge-blue'}" style="margin-right:8px;">${i + 1}</span>
+                                <strong>${t.keyword}</strong>
+                                <span style="color:var(--toss-gray-500);margin-left:8px;">${t.category}</span>
+                            </div>
+                            <div>
+                                <span style="color:var(--toss-blue);">${formatNumber(t.searches)}건</span>
+                                <span class="badge ${t.change >= 0 ? 'badge-red' : 'badge-green'}" style="margin-left:8px;">
+                                    ${t.change >= 0 ? '↑' : '↓'}${Math.abs(t.change)}%
+                                </span>
+                            </div>
+                        </div>
+                        `).join('')}
                     </div>
-                    <div class="chart-container">
-                        <canvas id="weeklyChart"></canvas>
-                    </div>
+                    ` : '<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-title">트렌드 데이터 없음</div></div>'}
                 </div>
-            </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">TOP 5 인기 키워드</h3>
-                    <button class="btn btn-secondary btn-sm" data-page="trends">전체보기</button>
-                </div>
-                ${state.trendData.length > 0 ? `
-                <div class="table-wrapper">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>순위</th>
-                                <th>키워드</th>
-                                <th>카테고리</th>
-                                <th>검색량</th>
-                                <th>변화</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${state.trendData.slice(0, 5).map((item, i) => `
-                            <tr>
-                                <td><span class="badge ${i < 3 ? 'badge-red' : 'badge-blue'}">${i + 1}</span></td>
-                                <td style="font-weight:600;">${item.keyword}</td>
-                                <td>${item.category}</td>
-                                <td>${formatNumber(item.searches)}건</td>
-                                <td><span class="${item.change >= 0 ? 'badge badge-red' : 'badge badge-green'}">${item.change >= 0 ? '↑' : '↓'}${Math.abs(item.change)}%</span></td>
-                            </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-                ` : `
-                <div class="empty-state">
-                    <div class="empty-icon">📊</div>
-                    <div class="empty-title">트렌드 데이터가 없습니다</div>
-                    <div class="empty-desc">트렌드 관리에서 데이터를 추가해주세요</div>
-                </div>
-                `}
             </div>`;
         }
 
+        function renderDashboardCharts() {
+            const { stats } = analyzeCategories();
+            const cats = Object.keys(stats);
+            const ctx = document.getElementById('catChart');
+
+            if (ctx && cats.length > 0) {
+                state.charts.cat = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: cats,
+                        datasets: [{
+                            data: cats.map(c => stats[c].sales),
+                            backgroundColor: ['#3182F6', '#F04452', '#30B06E', '#F59F00', '#8B95A1', '#6B7684'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { position: 'bottom' } }
+                    }
+                });
+            }
+        }
+
+        // ============================================
+        // 데이터 업로드
+        // ============================================
         function renderUpload() {
             return `
             <div class="page-header">
@@ -1095,186 +582,172 @@
                 </div>
             </div>
 
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">데이터 형식 안내</h3>
-                </div>
-                <p style="color:var(--toss-gray-600);font-size:14px;margin-bottom:16px;">
-                    엑셀 파일에 다음 열이 포함되어야 합니다:
-                </p>
-                <div class="table-wrapper">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>열 이름 (예시)</th>
-                                <th>설명</th>
-                                <th>필수 여부</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td><code>카테고리</code> 또는 <code>category</code></td>
-                                <td>상품 카테고리</td>
-                                <td><span class="badge badge-red">필수</span></td>
-                            </tr>
-                            <tr>
-                                <td><code>판매금액</code> 또는 <code>sales</code></td>
-                                <td>판매 금액</td>
-                                <td><span class="badge badge-red">필수</span></td>
-                            </tr>
-                            <tr>
-                                <td><code>판매수량</code> 또는 <code>quantity</code></td>
-                                <td>판매 수량</td>
-                                <td><span class="badge badge-blue">선택</span></td>
-                            </tr>
-                            <tr>
-                                <td><code>상품명</code> 또는 <code>product</code></td>
-                                <td>상품 이름</td>
-                                <td><span class="badge badge-blue">선택</span></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
             ${state.salesData.length > 0 ? `
             <div class="card">
                 <div class="card-header">
                     <h3 class="card-title">업로드된 데이터 (${state.salesData.length}건)</h3>
-                    <button class="btn btn-secondary btn-sm" id="clearDataBtn">데이터 초기화</button>
+                    <div style="display:flex;gap:8px;">
+                        <button class="btn btn-primary" id="analyzeBtn">📈 데이터 분석하기</button>
+                        <button class="btn btn-danger btn-sm" id="clearDataBtn">삭제</button>
+                    </div>
                 </div>
-                <div class="table-wrapper" style="max-height:400px;overflow-y:auto;">
+                <div class="info-box green">
+                    ✅ ${state.salesData.length}건의 데이터가 업로드되었습니다. "데이터 분석하기" 버튼을 클릭하여 분석 결과를 확인하세요.
+                </div>
+                <div class="table-wrapper" style="max-height:400px;overflow-y:auto;margin-top:16px;">
                     <table class="table">
                         <thead>
-                            <tr>
-                                ${Object.keys(state.salesData[0]).map(key => `<th>${key}</th>`).join('')}
-                            </tr>
+                            <tr>${Object.keys(state.salesData[0]).slice(0, 6).map(k => `<th>${k}</th>`).join('')}</tr>
                         </thead>
                         <tbody>
-                            ${state.salesData.slice(0, 50).map(row => `
-                            <tr>
-                                ${Object.values(row).map(val => `<td>${val}</td>`).join('')}
-                            </tr>
+                            ${state.salesData.slice(0, 20).map(row => `
+                            <tr>${Object.values(row).slice(0, 6).map(v => `<td>${v}</td>`).join('')}</tr>
                             `).join('')}
                         </tbody>
                     </table>
                 </div>
-                ${state.salesData.length > 50 ? `<p style="text-align:center;color:var(--toss-gray-500);padding:16px;">... 외 ${state.salesData.length - 50}건</p>` : ''}
+                ${state.salesData.length > 20 ? `<p style="text-align:center;color:var(--toss-gray-500);padding:16px;">... 외 ${state.salesData.length - 20}건</p>` : ''}
             </div>
-            ` : ''}`;
+            ` : `
+            <div class="card">
+                <div class="card-header"><h3 class="card-title">데이터 형식 안내</h3></div>
+                <p style="color:var(--toss-gray-600);margin-bottom:16px;">엑셀 파일에 다음 열이 포함되어야 합니다:</p>
+                <table class="table">
+                    <thead><tr><th>열 이름</th><th>설명</th><th>필수</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>카테고리</code></td><td>상품 카테고리</td><td><span class="badge badge-red">필수</span></td></tr>
+                        <tr><td><code>판매금액</code></td><td>판매 금액</td><td><span class="badge badge-red">필수</span></td></tr>
+                        <tr><td><code>판매수량</code></td><td>판매 수량</td><td><span class="badge badge-blue">선택</span></td></tr>
+                    </tbody>
+                </table>
+            </div>
+            `}`;
         }
 
+        // ============================================
+        // 판매 분석
+        // ============================================
         function renderAnalysis() {
-            analyzeSalesData();
-            const categories = Object.keys(state.categoryStats);
-            const sortedCategories = categories.sort((a, b) => state.categoryStats[b].sales - state.categoryStats[a].sales);
+            if (state.salesData.length === 0) {
+                return `
+                <div class="page-header">
+                    <h1 class="page-title">판매 분석</h1>
+                    <p class="page-desc">카테고리별 판매 현황을 분석합니다</p>
+                </div>
+                <div class="card">
+                    <div class="empty-state">
+                        <div class="empty-icon">📊</div>
+                        <div class="empty-title">분석할 데이터가 없습니다</div>
+                        <div class="empty-desc">데이터 업로드 페이지에서 엑셀 파일을 업로드해주세요</div>
+                        <button class="btn btn-primary" style="margin-top:20px;" data-page="upload">데이터 업로드하기</button>
+                    </div>
+                </div>`;
+            }
+
+            const { stats, totalSales, totalQty } = analyzeCategories();
+            const sortedCats = Object.entries(stats).sort((a, b) => b[1].sales - a[1].sales);
 
             return `
             <div class="page-header">
                 <h1 class="page-title">판매 분석</h1>
-                <p class="page-desc">카테고리별 판매 현황을 분석합니다</p>
-            </div>
-
-            ${state.salesData.length === 0 ? `
-            <div class="card">
-                <div class="empty-state">
-                    <div class="empty-icon">📊</div>
-                    <div class="empty-title">분석할 데이터가 없습니다</div>
-                    <div class="empty-desc">데이터 업로드 페이지에서 엑셀 파일을 업로드해주세요</div>
-                    <button class="btn btn-primary" style="margin-top:20px;" data-page="upload">데이터 업로드하기</button>
-                </div>
-            </div>
-            ` : `
-            <div class="category-chips">
-                <button class="chip ${state.selectedCategory === 'all' ? 'active' : ''}" data-category="all">전체</button>
-                ${sortedCategories.map(cat => `
-                    <button class="chip ${state.selectedCategory === cat ? 'active' : ''}" data-category="${cat}">${cat}</button>
-                `).join('')}
+                <p class="page-desc">카테고리별 판매 현황</p>
             </div>
 
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-label">총 판매금액</div>
-                    <div class="stat-value">${formatCurrency(state.totalSales)}</div>
+                    <div class="stat-value blue">${formatCurrency(totalSales)}</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-label">총 판매수량</div>
-                    <div class="stat-value">${formatNumber(state.totalQuantity)}개</div>
+                    <div class="stat-value">${formatNumber(totalQty)}개</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-label">평균 객단가</div>
-                    <div class="stat-value">${formatCurrency(state.totalQuantity > 0 ? state.totalSales / state.totalQuantity : 0)}</div>
+                    <div class="stat-value">${formatCurrency(totalQty > 0 ? Math.round(totalSales / totalQty) : 0)}</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-label">카테고리 수</div>
-                    <div class="stat-value">${categories.length}개</div>
+                    <div class="stat-value">${sortedCats.length}개</div>
                 </div>
             </div>
 
             <div class="grid-2">
                 <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">카테고리별 판매금액</h3>
-                    </div>
-                    <div class="chart-container">
-                        <canvas id="salesPieChart"></canvas>
-                    </div>
+                    <div class="card-header"><h3 class="card-title">카테고리별 판매금액</h3></div>
+                    <div class="chart-container"><canvas id="salesPieChart"></canvas></div>
                 </div>
                 <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">카테고리별 판매수량</h3>
-                    </div>
-                    <div class="chart-container">
-                        <canvas id="quantityBarChart"></canvas>
-                    </div>
+                    <div class="card-header"><h3 class="card-title">카테고리별 판매수량</h3></div>
+                    <div class="chart-container"><canvas id="qtyBarChart"></canvas></div>
                 </div>
             </div>
 
             <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">카테고리별 상세 현황</h3>
-                    <button class="btn btn-secondary btn-sm" id="exportAnalysisBtn">📥 리포트 다운로드</button>
-                </div>
-                <div class="table-wrapper">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>순위</th>
-                                <th>카테고리</th>
-                                <th>판매금액</th>
-                                <th>비중</th>
-                                <th>판매수량</th>
-                                <th>평균단가</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${sortedCategories.map((cat, i) => {
-                                const data = state.categoryStats[cat];
-                                return `
-                                <tr>
-                                    <td><span class="badge ${i < 3 ? 'badge-red' : 'badge-blue'}">${i + 1}</span></td>
-                                    <td style="font-weight:600;">${cat}</td>
-                                    <td>${formatCurrency(data.sales)}</td>
-                                    <td>
-                                        <div style="display:flex;align-items:center;gap:8px;">
-                                            <div style="flex:1;height:8px;background:var(--toss-gray-100);border-radius:4px;overflow:hidden;">
-                                                <div style="width:${data.salesRatio}%;height:100%;background:var(--toss-blue);border-radius:4px;"></div>
-                                            </div>
-                                            <span style="font-size:13px;color:var(--toss-gray-600);min-width:45px;">${data.salesRatio}%</span>
-                                        </div>
-                                    </td>
-                                    <td>${formatNumber(data.quantity)}개</td>
-                                    <td>${formatCurrency(data.quantity > 0 ? data.sales / data.quantity : 0)}</td>
-                                </tr>
-                                `;
-                            }).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            `}`;
+                <div class="card-header"><h3 class="card-title">카테고리별 상세</h3></div>
+                <table class="table">
+                    <thead><tr><th>순위</th><th>카테고리</th><th>판매금액</th><th>비중</th><th>판매수량</th></tr></thead>
+                    <tbody>
+                        ${sortedCats.map(([cat, data], i) => `
+                        <tr>
+                            <td><span class="badge ${i < 3 ? 'badge-red' : 'badge-blue'}">${i + 1}</span></td>
+                            <td><strong>${cat}</strong></td>
+                            <td>${formatCurrency(data.sales)}</td>
+                            <td>
+                                <div style="display:flex;align-items:center;gap:8px;">
+                                    <div class="progress-bar" style="flex:1;"><div class="progress-fill" style="width:${data.ratio}%;"></div></div>
+                                    <span style="min-width:45px;">${data.ratio}%</span>
+                                </div>
+                            </td>
+                            <td>${formatNumber(data.quantity)}개</td>
+                        </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>`;
         }
 
+        function renderAnalysisCharts() {
+            const { stats } = analyzeCategories();
+            const cats = Object.keys(stats);
+
+            const pieCtx = document.getElementById('salesPieChart');
+            if (pieCtx && cats.length > 0) {
+                state.charts.pie = new Chart(pieCtx, {
+                    type: 'pie',
+                    data: {
+                        labels: cats,
+                        datasets: [{
+                            data: cats.map(c => stats[c].sales),
+                            backgroundColor: ['#3182F6', '#F04452', '#30B06E', '#F59F00', '#8B95A1', '#6B7684'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+                });
+            }
+
+            const barCtx = document.getElementById('qtyBarChart');
+            if (barCtx && cats.length > 0) {
+                state.charts.bar = new Chart(barCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: cats,
+                        datasets: [{
+                            label: '판매수량',
+                            data: cats.map(c => stats[c].quantity),
+                            backgroundColor: '#3182F6',
+                            borderRadius: 8
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+                });
+            }
+        }
+
+        // ============================================
+        // 트렌드 관리
+        // ============================================
         function renderTrends() {
             return `
             <div class="page-header">
@@ -1284,276 +757,162 @@
 
             <div class="card">
                 <div class="card-header">
-                    <h3 class="card-title">트렌드 키워드</h3>
-                    <div style="display:flex;gap:8px;">
-                        <button class="btn btn-secondary btn-sm" id="importTrendBtn">📤 가져오기</button>
-                        <button class="btn btn-primary btn-sm" id="addTrendBtn">+ 추가</button>
-                    </div>
+                    <h3 class="card-title">트렌드 키워드 (${state.trendData.length}개)</h3>
+                    <button class="btn btn-primary btn-sm" id="addTrendBtn">+ 추가</button>
                 </div>
 
                 ${state.trendData.length > 0 ? `
-                <div class="table-wrapper">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>순위</th>
-                                <th>키워드</th>
-                                <th>카테고리</th>
-                                <th>검색량</th>
-                                <th>변화율</th>
-                                <th>가격(엔)</th>
-                                <th>관리</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${state.trendData.map((item, i) => `
-                            <tr>
-                                <td><span class="badge ${i < 3 ? 'badge-red' : 'badge-blue'}">${i + 1}</span></td>
-                                <td style="font-weight:600;">${item.keyword}</td>
-                                <td>${item.category}</td>
-                                <td>${formatNumber(item.searches)}건</td>
-                                <td><span class="${item.change >= 0 ? 'badge badge-red' : 'badge badge-green'}">${item.change >= 0 ? '↑' : '↓'}${Math.abs(item.change)}%</span></td>
-                                <td>${formatNumber(item.price || 0)}엔</td>
-                                <td>
-                                    <button class="btn btn-ghost btn-sm edit-trend-btn" data-id="${item.id}">수정</button>
-                                    <button class="btn btn-ghost btn-sm delete-trend-btn" data-id="${item.id}" style="color:var(--toss-red);">삭제</button>
-                                </td>
-                            </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-                ` : `
-                <div class="empty-state">
-                    <div class="empty-icon">🔥</div>
-                    <div class="empty-title">트렌드 데이터가 없습니다</div>
-                    <div class="empty-desc">새로운 트렌드 키워드를 추가해주세요</div>
-                </div>
-                `}
+                <table class="table">
+                    <thead><tr><th>순위</th><th>키워드</th><th>카테고리</th><th>검색량</th><th>변화율</th><th>관리</th></tr></thead>
+                    <tbody>
+                        ${state.trendData.map((t, i) => `
+                        <tr>
+                            <td><span class="badge ${i < 3 ? 'badge-red' : 'badge-blue'}">${i + 1}</span></td>
+                            <td><strong>${t.keyword}</strong></td>
+                            <td>${t.category}</td>
+                            <td>${formatNumber(t.searches)}건</td>
+                            <td><span class="badge ${t.change >= 0 ? 'badge-red' : 'badge-green'}">${t.change >= 0 ? '↑' : '↓'}${Math.abs(t.change)}%</span></td>
+                            <td>
+                                <button class="btn btn-secondary btn-sm edit-trend" data-id="${t.id}">수정</button>
+                                <button class="btn btn-danger btn-sm delete-trend" data-id="${t.id}">삭제</button>
+                            </td>
+                        </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+                ` : '<div class="empty-state"><div class="empty-icon">🔥</div><div class="empty-title">트렌드 데이터 없음</div></div>'}
             </div>`;
         }
 
+        // ============================================
+        // 뉴스레터
+        // ============================================
         function renderNewsletter() {
+            const hasApiKey = state.geminiApiKey.length > 10;
+
             return `
             <div class="page-header">
                 <h1 class="page-title">뉴스레터</h1>
-                <p class="page-desc">구독자에게 발송할 뉴스레터를 작성합니다</p>
+                <p class="page-desc">AI로 뉴스레터 콘텐츠를 생성합니다</p>
             </div>
 
-            <div class="tabs">
-                <button class="tab active" data-tab="write">작성하기</button>
-                <button class="tab" data-tab="ai">AI 생성</button>
-                <button class="tab" data-tab="history">발송 내역</button>
+            ${!hasApiKey ? `
+            <div class="info-box yellow">
+                ⚠️ AI 콘텐츠 생성을 위해 <button style="color:var(--toss-blue);background:none;border:none;cursor:pointer;text-decoration:underline;" data-page="settings">설정</button>에서 Gemini API 키를 먼저 등록해주세요.
             </div>
+            ` : ''}
 
-            <div id="newsletterContent">
-                ${renderNewsletterWrite()}
-            </div>`;
-        }
-
-        function renderNewsletterWrite() {
-            return `
-            <div class="grid-2">
-                <div>
-                    <div class="card">
-                        <div class="card-header">
-                            <h3 class="card-title">뉴스레터 작성</h3>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">제목</label>
-                            <input type="text" id="newsletterTitle" class="form-input" placeholder="이번 주 비드바이 트렌드">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">본문</label>
-                            <div class="editor-toolbar">
-                                <button class="editor-btn" title="굵게"><b>B</b></button>
-                                <button class="editor-btn" title="기울임"><i>I</i></button>
-                                <button class="editor-btn" title="링크">🔗</button>
-                                <button class="editor-btn" title="이미지">🖼️</button>
-                            </div>
-                            <div class="editor-content" contenteditable="true" id="newsletterBody" placeholder="뉴스레터 내용을 입력하세요..."></div>
-                        </div>
-                        <div style="display:flex;gap:12px;">
-                            <button class="btn btn-secondary" id="previewNewsletterBtn">미리보기</button>
-                            <button class="btn btn-primary" id="sendNewsletterBtn">발송하기</button>
-                        </div>
-                    </div>
-                </div>
-                <div>
-                    <div class="card">
-                        <div class="card-header">
-                            <h3 class="card-title">미리보기</h3>
-                        </div>
-                        <div class="newsletter-preview" id="newsletterPreview">
-                            <div class="newsletter-header">
-                                <h2 style="font-size:24px;font-weight:700;margin-bottom:8px;">비드바이코리아</h2>
-                                <p style="opacity:0.9;">일본 구매대행 20년 전통</p>
-                            </div>
-                            <div class="newsletter-body">
-                                <p style="color:var(--toss-gray-500);text-align:center;">왼쪽에서 내용을 입력하면<br>여기에 미리보기가 표시됩니다</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>`;
-        }
-
-        function renderNewsletterAI() {
-            return `
             <div class="grid-2">
                 <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">AI 콘텐츠 생성</h3>
-                    </div>
-
-                    ${!state.geminiApiKey ? `
-                    <div style="padding:16px;background:var(--toss-yellow-light);border-radius:12px;margin-bottom:20px;">
-                        <p style="color:var(--toss-yellow);font-size:14px;">⚠️ Gemini API 키가 설정되지 않았습니다. <button style="color:var(--toss-blue);background:none;border:none;cursor:pointer;text-decoration:underline;" data-page="settings">설정</button>에서 API 키를 입력해주세요.</p>
-                    </div>
-                    ` : ''}
-
+                    <div class="card-header"><h3 class="card-title">AI 콘텐츠 생성</h3></div>
                     <div class="form-group">
                         <label class="form-label">콘텐츠 유형</label>
-                        <select id="aiContentType" class="form-input form-select">
-                            <option value="newsletter">📧 뉴스레터 본문</option>
+                        <select id="contentType" class="form-input form-select">
+                            <option value="newsletter">📧 뉴스레터</option>
                             <option value="blog">📝 블로그 포스트</option>
                             <option value="sns">📱 SNS 포스트</option>
-                            <option value="product_desc">🏷️ 상품 설명</option>
-                            <option value="weekly_insight">📊 주간 인사이트</option>
                         </select>
                     </div>
-
-                    <div style="padding:16px;background:var(--toss-blue-light);border-radius:12px;margin-bottom:20px;">
-                        <p style="color:var(--toss-blue);font-size:14px;">💡 현재 ${state.trendData.length}개 키워드, ${state.weekInfo.month}월 ${state.weekInfo.week}주차 데이터 기반으로 생성됩니다.</p>
+                    <div class="info-box blue">
+                        💡 ${state.trendData.length}개 트렌드 키워드 기반으로 콘텐츠를 생성합니다.
                     </div>
-
-                    <button class="btn btn-primary" style="width:100%;" id="generateAIBtn" ${!state.geminiApiKey ? 'disabled' : ''}>
-                        ${state.isGenerating ? '<span class="spinner"></span> 생성 중...' : '✨ AI 콘텐츠 생성'}
+                    <button class="btn btn-primary" style="width:100%;" id="generateBtn" ${!hasApiKey ? 'disabled' : ''}>
+                        ${state.isGenerating ? '⏳ 생성 중...' : '✨ AI 콘텐츠 생성'}
                     </button>
                 </div>
 
                 <div class="card">
                     <div class="card-header">
                         <h3 class="card-title">생성된 콘텐츠</h3>
-                        <button class="btn btn-secondary btn-sm" id="copyAIContentBtn">📋 복사</button>
+                        <button class="btn btn-secondary btn-sm" id="copyContentBtn">📋 복사</button>
                     </div>
-                    <div style="background:var(--toss-gray-900);border-radius:12px;padding:20px;min-height:400px;">
-                        <pre id="aiGeneratedContent" style="color:var(--toss-white);font-size:14px;line-height:1.8;white-space:pre-wrap;font-family:inherit;">AI 콘텐츠가 여기에 표시됩니다.</pre>
+                    <div style="background:var(--toss-gray-900);border-radius:12px;padding:20px;min-height:300px;">
+                        <pre id="generatedContent" style="color:white;font-size:14px;white-space:pre-wrap;line-height:1.8;font-family:inherit;">${state.generatedContent || '왼쪽에서 콘텐츠 유형을 선택하고\n"AI 콘텐츠 생성" 버튼을 클릭하세요.'}</pre>
                     </div>
                 </div>
-            </div>`;
-        }
+            </div>
 
-        function renderNewsletterHistory() {
-            return `
             <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">발송 내역</h3>
-                </div>
+                <div class="card-header"><h3 class="card-title">발송 내역</h3></div>
                 ${state.newsletters.length > 0 ? `
-                <div class="table-wrapper">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>제목</th>
-                                <th>발송일</th>
-                                <th>수신자</th>
-                                <th>상태</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${state.newsletters.map(nl => `
-                            <tr>
-                                <td style="font-weight:600;">${nl.title}</td>
-                                <td>${nl.sentAt}</td>
-                                <td>${nl.recipients}명</td>
-                                <td><span class="badge badge-green">발송완료</span></td>
-                            </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-                ` : `
-                <div class="empty-state">
-                    <div class="empty-icon">✉️</div>
-                    <div class="empty-title">발송 내역이 없습니다</div>
-                    <div class="empty-desc">첫 번째 뉴스레터를 작성해보세요</div>
-                </div>
-                `}
+                <table class="table">
+                    <thead><tr><th>제목</th><th>발송일</th><th>수신자</th><th>상태</th></tr></thead>
+                    <tbody>
+                        ${state.newsletters.map(n => `
+                        <tr>
+                            <td><strong>${n.title}</strong></td>
+                            <td>${n.sentAt}</td>
+                            <td>${n.recipients}명</td>
+                            <td><span class="badge badge-green">발송완료</span></td>
+                        </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+                ` : '<div class="empty-state"><div class="empty-icon">✉️</div><div class="empty-title">발송 내역 없음</div></div>'}
             </div>`;
         }
 
+        // ============================================
+        // 구독자 관리
+        // ============================================
         function renderSubscribers() {
+            const active = state.subscribers.filter(s => s.subscribed).length;
+            const inactive = state.subscribers.length - active;
+
             return `
             <div class="page-header">
                 <h1 class="page-title">구독자 관리</h1>
                 <p class="page-desc">뉴스레터 구독자를 관리합니다</p>
             </div>
 
-            <div class="stats-grid" style="grid-template-columns:repeat(3,1fr);">
+            <div class="grid-3">
                 <div class="stat-card">
                     <div class="stat-label">전체 구독자</div>
                     <div class="stat-value">${state.subscribers.length}명</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-label">활성 구독자</div>
-                    <div class="stat-value">${state.subscribers.filter(s => s.subscribed).length}명</div>
+                    <div class="stat-value" style="color:var(--toss-green);">${active}명</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-label">구독 해지</div>
-                    <div class="stat-value">${state.subscribers.filter(s => !s.subscribed).length}명</div>
+                    <div class="stat-value" style="color:var(--toss-red);">${inactive}명</div>
                 </div>
             </div>
 
             <div class="card">
                 <div class="card-header">
                     <h3 class="card-title">구독자 목록</h3>
-                    <div style="display:flex;gap:8px;">
-                        <button class="btn btn-secondary btn-sm" id="exportSubscribersBtn">📥 내보내기</button>
-                        <button class="btn btn-primary btn-sm" id="addSubscriberBtn">+ 추가</button>
-                    </div>
+                    <button class="btn btn-primary btn-sm" id="addSubscriberBtn">+ 추가</button>
                 </div>
 
                 ${state.subscribers.length > 0 ? `
-                <div class="table-wrapper">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>이름</th>
-                                <th>이메일</th>
-                                <th>가입일</th>
-                                <th>상태</th>
-                                <th>관리</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${state.subscribers.map(sub => `
-                            <tr>
-                                <td style="font-weight:600;">${sub.name}</td>
-                                <td>${sub.email}</td>
-                                <td>${sub.createdAt}</td>
-                                <td><span class="badge ${sub.subscribed ? 'badge-green' : 'badge-red'}">${sub.subscribed ? '구독중' : '해지'}</span></td>
-                                <td>
-                                    <button class="btn btn-ghost btn-sm toggle-sub-btn" data-id="${sub.id}">${sub.subscribed ? '해지' : '재구독'}</button>
-                                    <button class="btn btn-ghost btn-sm delete-sub-btn" data-id="${sub.id}" style="color:var(--toss-red);">삭제</button>
-                                </td>
-                            </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-                ` : `
-                <div class="empty-state">
-                    <div class="empty-icon">👥</div>
-                    <div class="empty-title">구독자가 없습니다</div>
-                    <div class="empty-desc">새로운 구독자를 추가해주세요</div>
-                </div>
-                `}
+                <table class="table">
+                    <thead><tr><th>이름</th><th>이메일</th><th>가입일</th><th>상태</th><th>관리</th></tr></thead>
+                    <tbody>
+                        ${state.subscribers.map(s => `
+                        <tr>
+                            <td><strong>${s.name}</strong></td>
+                            <td>${s.email}</td>
+                            <td>${s.createdAt}</td>
+                            <td><span class="badge ${s.subscribed ? 'badge-green' : 'badge-red'}">${s.subscribed ? '구독중' : '해지'}</span></td>
+                            <td>
+                                <button class="btn btn-secondary btn-sm toggle-sub" data-id="${s.id}">${s.subscribed ? '해지' : '재구독'}</button>
+                                <button class="btn btn-danger btn-sm delete-sub" data-id="${s.id}">삭제</button>
+                            </td>
+                        </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+                ` : '<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-title">구독자 없음</div></div>'}
             </div>`;
         }
 
+        // ============================================
+        // 설정
+        // ============================================
         function renderSettings() {
-            const isApiKeySet = state.geminiApiKey && state.geminiApiKey.length > 10;
+            const hasApiKey = state.geminiApiKey.length > 10;
 
             return `
             <div class="page-header">
@@ -1564,204 +923,45 @@
             <div class="card" style="max-width:640px;">
                 <div class="card-header">
                     <h3 class="card-title">🤖 Gemini AI 설정</h3>
-                    ${isApiKeySet ?
-                        '<span class="badge badge-green">연결됨</span>' :
-                        '<span class="badge badge-red">미연결</span>'
-                    }
+                    <span class="badge ${hasApiKey ? 'badge-green' : 'badge-red'}">${hasApiKey ? '연결됨' : '미연결'}</span>
                 </div>
 
-                <div style="padding:20px;background:var(--toss-blue-light);border-radius:12px;margin-bottom:20px;">
-                    <p style="color:var(--toss-blue);font-size:14px;line-height:1.7;">
-                        <strong>AI 콘텐츠 생성</strong>을 사용하려면 Google Gemini API 키가 필요합니다.<br>
-                        뉴스레터, 블로그 포스트, SNS 콘텐츠를 자동으로 생성할 수 있습니다.
-                    </p>
+                <div class="info-box blue">
+                    <strong>AI 콘텐츠 생성</strong>을 사용하려면 Google Gemini API 키가 필요합니다.
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">Gemini API 키</label>
                     <div style="display:flex;gap:8px;">
-                        <input type="${state.showApiKey ? 'text' : 'password'}" id="apiKeyInput" class="form-input" value="${state.geminiApiKey}" placeholder="AIzaSy..." style="flex:1;">
-                        <button class="btn btn-secondary" id="toggleApiKeyBtn" style="min-width:80px;">
-                            ${state.showApiKey ? '숨기기' : '보기'}
-                        </button>
+                        <input type="${state.showApiKey ? 'text' : 'password'}" id="apiKeyInput" class="form-input"
+                               value="${state.geminiApiKey}" placeholder="AIzaSy..." style="flex:1;">
+                        <button class="btn btn-secondary" id="toggleKeyBtn">${state.showApiKey ? '숨기기' : '보기'}</button>
                     </div>
                 </div>
 
                 <div style="display:flex;gap:12px;margin-bottom:20px;">
-                    <button class="btn btn-primary" id="saveApiKeyBtn" style="flex:1;">💾 API 키 저장</button>
+                    <button class="btn btn-primary" id="saveApiKeyBtn" style="flex:1;">💾 저장</button>
                     <button class="btn btn-secondary" id="testApiKeyBtn" style="flex:1;">🔍 연결 테스트</button>
                 </div>
 
-                <div style="padding:16px;background:var(--toss-gray-50);border-radius:12px;">
-                    <p style="font-size:14px;font-weight:600;color:var(--toss-gray-900);margin-bottom:12px;">📋 API 키 발급 방법</p>
-                    <ol style="font-size:13px;color:var(--toss-gray-600);line-height:1.8;padding-left:20px;">
-                        <li><a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--toss-blue);text-decoration:underline;">Google AI Studio</a> 접속</li>
+                <div style="background:var(--toss-gray-50);padding:16px;border-radius:12px;">
+                    <p style="font-weight:600;margin-bottom:12px;">📋 API 키 발급 방법</p>
+                    <ol style="font-size:14px;color:var(--toss-gray-600);line-height:2;padding-left:20px;">
+                        <li><a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--toss-blue);">Google AI Studio</a> 접속</li>
                         <li>Google 계정으로 로그인</li>
                         <li>"Create API Key" 버튼 클릭</li>
-                        <li>생성된 API 키 복사 후 위에 붙여넣기</li>
+                        <li>생성된 API 키를 위에 붙여넣기</li>
                     </ol>
-                    <p style="font-size:12px;color:var(--toss-gray-500);margin-top:12px;">
-                        * Gemini API는 무료로 사용할 수 있습니다 (일일 사용량 제한 있음)
-                    </p>
                 </div>
             </div>
 
             <div class="card" style="max-width:640px;">
-                <div class="card-header">
-                    <h3 class="card-title">📅 기간 설정</h3>
-                </div>
-                <div class="grid-2">
-                    <div class="form-group">
-                        <label class="form-label">월</label>
-                        <select id="monthSelect" class="form-input form-select">
-                            ${[...Array(12)].map((_, i) => `<option value="${i+1}" ${state.weekInfo.month == i+1 ? 'selected' : ''}>${i+1}월</option>`).join('')}
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">주차</label>
-                        <select id="weekSelect" class="form-input form-select">
-                            ${[1,2,3,4,5].map(w => `<option value="${w}" ${state.weekInfo.week == w ? 'selected' : ''}>${w}주차</option>`).join('')}
-                        </select>
-                    </div>
-                </div>
-                <button class="btn btn-secondary" id="savePeriodBtn">기간 저장</button>
-            </div>
-
-            <div class="card" style="max-width:640px;">
-                <div class="card-header">
-                    <h3 class="card-title">💾 데이터 관리</h3>
-                </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-                    <button class="btn btn-secondary" id="exportAllBtn">
-                        <span>📥</span> 전체 백업
-                    </button>
-                    <label class="btn btn-secondary" style="cursor:pointer;">
-                        <span>📤</span> 백업 복원
-                        <input type="file" id="importAllInput" accept=".json" style="display:none;">
-                    </label>
-                </div>
-                <div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--toss-gray-200);">
-                    <button class="btn btn-secondary" id="clearAllBtn" style="width:100%;color:var(--toss-red);">
-                        🗑️ 전체 데이터 초기화
-                    </button>
-                    <p style="font-size:12px;color:var(--toss-gray-500);margin-top:8px;text-align:center;">
-                        * 초기화하면 모든 데이터가 삭제되며 복구할 수 없습니다
-                    </p>
+                <div class="card-header"><h3 class="card-title">💾 데이터 관리</h3></div>
+                <div style="display:flex;gap:12px;">
+                    <button class="btn btn-secondary" id="exportBtn" style="flex:1;">📥 백업 다운로드</button>
+                    <button class="btn btn-danger" id="resetBtn" style="flex:1;">🗑️ 전체 초기화</button>
                 </div>
             </div>`;
-        }
-
-        // ============================================
-        // 차트 렌더링
-        // ============================================
-        function renderCharts() {
-            const categories = Object.keys(state.categoryStats);
-
-            // 카테고리 차트
-            const categoryCtx = document.getElementById('categoryChart');
-            if (categoryCtx && categories.length > 0) {
-                new Chart(categoryCtx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: categories,
-                        datasets: [{
-                            data: categories.map(c => state.categoryStats[c].sales),
-                            backgroundColor: ['#3182F6', '#F04452', '#30B06E', '#F59F00', '#8B95A1', '#6B7684'],
-                            borderWidth: 0
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: { position: 'bottom' }
-                        }
-                    }
-                });
-            }
-
-            // 주간 차트
-            const weeklyCtx = document.getElementById('weeklyChart');
-            if (weeklyCtx) {
-                new Chart(weeklyCtx, {
-                    type: 'line',
-                    data: {
-                        labels: ['월', '화', '수', '목', '금', '토', '일'],
-                        datasets: [{
-                            label: '판매금액',
-                            data: [120000, 150000, 180000, 140000, 200000, 250000, 180000],
-                            borderColor: '#3182F6',
-                            backgroundColor: 'rgba(49, 130, 246, 0.1)',
-                            fill: true,
-                            tension: 0.4
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: { display: false }
-                        },
-                        scales: {
-                            y: { beginAtZero: true }
-                        }
-                    }
-                });
-            }
-        }
-
-        function renderAnalysisCharts() {
-            const categories = Object.keys(state.categoryStats);
-
-            // 파이 차트
-            const pieCtx = document.getElementById('salesPieChart');
-            if (pieCtx && categories.length > 0) {
-                new Chart(pieCtx, {
-                    type: 'pie',
-                    data: {
-                        labels: categories,
-                        datasets: [{
-                            data: categories.map(c => state.categoryStats[c].sales),
-                            backgroundColor: ['#3182F6', '#F04452', '#30B06E', '#F59F00', '#8B95A1', '#6B7684', '#B0B8C1', '#D1D6DB'],
-                            borderWidth: 0
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: { position: 'bottom' }
-                        }
-                    }
-                });
-            }
-
-            // 바 차트
-            const barCtx = document.getElementById('quantityBarChart');
-            if (barCtx && categories.length > 0) {
-                new Chart(barCtx, {
-                    type: 'bar',
-                    data: {
-                        labels: categories,
-                        datasets: [{
-                            label: '판매수량',
-                            data: categories.map(c => state.categoryStats[c].quantity),
-                            backgroundColor: '#3182F6',
-                            borderRadius: 8
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: { display: false }
-                        },
-                        scales: {
-                            y: { beginAtZero: true }
-                        }
-                    }
-                });
-            }
         }
 
         // ============================================
@@ -1769,13 +969,15 @@
         // ============================================
         function attachEvents() {
             // 로그인
-            document.getElementById('loginBtn')?.addEventListener('click', () => {
+            document.getElementById('loginForm')?.addEventListener('submit', (e) => {
+                e.preventDefault();
                 const id = document.getElementById('loginId').value;
                 const pw = document.getElementById('loginPw').value;
                 if (id === 'admin' && pw === 'admin123') {
                     state.isLoggedIn = true;
-                    localStorage.setItem('isLoggedIn', 'true');
+                    localStorage.setItem('bidbuy_logged_in', 'true');
                     render();
+                    showToast('로그인 성공');
                 } else {
                     showToast('아이디 또는 비밀번호가 올바르지 않습니다');
                 }
@@ -1784,18 +986,15 @@
             // 로그아웃
             document.getElementById('logoutBtn')?.addEventListener('click', () => {
                 state.isLoggedIn = false;
-                localStorage.setItem('isLoggedIn', 'false');
+                localStorage.setItem('bidbuy_logged_in', 'false');
                 render();
             });
 
-            // 사이드바 네비게이션
-            document.querySelectorAll('.sidebar-link, [data-page]').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const page = btn.dataset.page;
-                    if (page) {
-                        state.currentPage = page;
-                        render();
-                    }
+            // 네비게이션
+            document.querySelectorAll('[data-page]').forEach(el => {
+                el.addEventListener('click', () => {
+                    state.currentPage = el.dataset.page;
+                    render();
                 });
             });
 
@@ -1805,52 +1004,41 @@
 
             if (uploadZone && fileInput) {
                 uploadZone.addEventListener('click', () => fileInput.click());
-
-                uploadZone.addEventListener('dragover', (e) => {
-                    e.preventDefault();
-                    uploadZone.classList.add('dragover');
-                });
-
-                uploadZone.addEventListener('dragleave', () => {
-                    uploadZone.classList.remove('dragover');
-                });
-
+                uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+                uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
                 uploadZone.addEventListener('drop', async (e) => {
                     e.preventDefault();
                     uploadZone.classList.remove('dragover');
                     const file = e.dataTransfer.files[0];
                     if (file) await handleFileUpload(file);
                 });
-
                 fileInput.addEventListener('change', async (e) => {
-                    const file = e.target.files[0];
-                    if (file) await handleFileUpload(file);
+                    if (e.target.files[0]) await handleFileUpload(e.target.files[0]);
                 });
             }
 
-            // 데이터 초기화
+            // 데이터 분석 버튼
+            document.getElementById('analyzeBtn')?.addEventListener('click', () => {
+                state.currentPage = 'analysis';
+                render();
+                showToast('분석 페이지로 이동합니다');
+            });
+
+            // 데이터 삭제
             document.getElementById('clearDataBtn')?.addEventListener('click', () => {
-                if (confirm('모든 판매 데이터를 삭제하시겠습니까?')) {
+                if (confirm('업로드된 데이터를 삭제하시겠습니까?')) {
                     state.salesData = [];
                     saveState();
                     render();
-                    showToast('데이터가 초기화되었습니다');
+                    showToast('데이터가 삭제되었습니다');
                 }
-            });
-
-            // 카테고리 필터
-            document.querySelectorAll('.chip[data-category]').forEach(chip => {
-                chip.addEventListener('click', () => {
-                    state.selectedCategory = chip.dataset.category;
-                    render();
-                });
             });
 
             // 트렌드 추가
             document.getElementById('addTrendBtn')?.addEventListener('click', () => {
-                const keyword = prompt('키워드를 입력하세요:');
+                const keyword = prompt('키워드:');
                 if (keyword) {
-                    const newId = Math.max(...state.trendData.map(d => d.id), 0) + 1;
+                    const newId = Math.max(0, ...state.trendData.map(t => t.id)) + 1;
                     state.trendData.push({
                         id: newId,
                         keyword,
@@ -1866,11 +1054,10 @@
             });
 
             // 트렌드 삭제
-            document.querySelectorAll('.delete-trend-btn').forEach(btn => {
+            document.querySelectorAll('.delete-trend').forEach(btn => {
                 btn.addEventListener('click', () => {
                     if (confirm('삭제하시겠습니까?')) {
-                        const id = parseInt(btn.dataset.id);
-                        state.trendData = state.trendData.filter(d => d.id !== id);
+                        state.trendData = state.trendData.filter(t => t.id !== parseInt(btn.dataset.id));
                         saveState();
                         render();
                         showToast('삭제되었습니다');
@@ -1878,183 +1065,53 @@
                 });
             });
 
-            // 뉴스레터 탭
-            document.querySelectorAll('.tab[data-tab]').forEach(tab => {
-                tab.addEventListener('click', () => {
-                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-                    tab.classList.add('active');
-                    const content = document.getElementById('newsletterContent');
-                    if (tab.dataset.tab === 'write') content.innerHTML = renderNewsletterWrite();
-                    else if (tab.dataset.tab === 'ai') content.innerHTML = renderNewsletterAI();
-                    else if (tab.dataset.tab === 'history') content.innerHTML = renderNewsletterHistory();
-                    attachEvents();
+            // 트렌드 수정
+            document.querySelectorAll('.edit-trend').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const t = state.trendData.find(x => x.id === parseInt(btn.dataset.id));
+                    if (t) {
+                        t.keyword = prompt('키워드:', t.keyword) || t.keyword;
+                        t.category = prompt('카테고리:', t.category) || t.category;
+                        t.searches = parseInt(prompt('검색량:', t.searches)) || t.searches;
+                        t.change = parseInt(prompt('변화율(%):', t.change)) ?? t.change;
+                        saveState();
+                        render();
+                        showToast('수정되었습니다');
+                    }
                 });
             });
 
             // AI 콘텐츠 생성
-            document.getElementById('generateAIBtn')?.addEventListener('click', async () => {
+            document.getElementById('generateBtn')?.addEventListener('click', async () => {
                 state.isGenerating = true;
                 render();
 
                 try {
-                    const type = document.getElementById('aiContentType')?.value || 'newsletter';
-                    const prompt = buildAIPrompt(type);
-                    const content = await generateWithGemini(prompt);
-                    document.getElementById('aiGeneratedContent').textContent = content || '생성에 실패했습니다';
-                } catch (error) {
-                    showToast('오류: ' + error.message);
+                    const type = document.getElementById('contentType')?.value || 'newsletter';
+                    const prompt = buildPrompt(type);
+                    const content = await callGemini(prompt);
+                    state.generatedContent = content || '생성 실패';
+                } catch (err) {
+                    state.generatedContent = '오류: ' + err.message;
                 }
 
                 state.isGenerating = false;
+                render();
             });
 
-            // AI 콘텐츠 복사
-            document.getElementById('copyAIContentBtn')?.addEventListener('click', () => {
-                const content = document.getElementById('aiGeneratedContent')?.textContent;
-                if (content) {
-                    navigator.clipboard.writeText(content);
+            // 콘텐츠 복사
+            document.getElementById('copyContentBtn')?.addEventListener('click', () => {
+                if (state.generatedContent) {
+                    navigator.clipboard.writeText(state.generatedContent);
                     showToast('복사되었습니다');
                 }
             });
 
-            // API 키 저장
-            document.getElementById('saveApiKeyBtn')?.addEventListener('click', () => {
-                state.geminiApiKey = document.getElementById('apiKeyInput').value;
-                localStorage.setItem('gemini_api_key', state.geminiApiKey);
-                showToast('API 키가 저장되었습니다');
-                render();
-            });
-
-            // API 키 보기/숨기기
-            document.getElementById('toggleApiKeyBtn')?.addEventListener('click', () => {
-                state.showApiKey = !state.showApiKey;
-                render();
-            });
-
-            // API 연결 테스트
-            document.getElementById('testApiKeyBtn')?.addEventListener('click', async () => {
-                const apiKey = document.getElementById('apiKeyInput').value;
-                if (!apiKey) {
-                    showToast('API 키를 입력해주세요');
-                    return;
-                }
-
-                showToast('연결 테스트 중...');
-
-                try {
-                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            contents: [{ parts: [{ text: '안녕' }] }],
-                            generationConfig: { maxOutputTokens: 10 }
-                        })
-                    });
-
-                    const data = await response.json();
-
-                    if (data.candidates) {
-                        showToast('✅ API 연결 성공! 정상 작동합니다.');
-                        state.geminiApiKey = apiKey;
-                        localStorage.setItem('gemini_api_key', apiKey);
-                        render();
-                    } else if (data.error) {
-                        showToast('❌ 오류: ' + data.error.message);
-                    } else {
-                        showToast('❌ 알 수 없는 오류가 발생했습니다');
-                    }
-                } catch (error) {
-                    showToast('❌ 연결 실패: ' + error.message);
-                }
-            });
-
-            // 기간 저장
-            document.getElementById('savePeriodBtn')?.addEventListener('click', () => {
-                showToast('기간이 저장되었습니다');
-            });
-
-            // 기간 설정
-            document.getElementById('monthSelect')?.addEventListener('change', (e) => {
-                state.weekInfo.month = e.target.value;
-            });
-            document.getElementById('weekSelect')?.addEventListener('change', (e) => {
-                state.weekInfo.week = e.target.value;
-            });
-
-            // 전체 데이터 내보내기
-            document.getElementById('exportAllBtn')?.addEventListener('click', () => {
-                const data = {
-                    salesData: state.salesData,
-                    trendData: state.trendData,
-                    newsletters: state.newsletters,
-                    subscribers: state.subscribers,
-                    weekInfo: state.weekInfo,
-                    exportedAt: new Date().toISOString()
-                };
-                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `bidbuy_backup_${new Date().toISOString().split('T')[0]}.json`;
-                a.click();
-                showToast('백업 파일이 다운로드되었습니다');
-            });
-
-            // 백업 복원
-            document.getElementById('importAllInput')?.addEventListener('change', (e) => {
-                const file = e.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        try {
-                            const data = JSON.parse(e.target.result);
-                            if (data.salesData) state.salesData = data.salesData;
-                            if (data.trendData) state.trendData = data.trendData;
-                            if (data.newsletters) state.newsletters = data.newsletters;
-                            if (data.subscribers) state.subscribers = data.subscribers;
-                            if (data.weekInfo) state.weekInfo = data.weekInfo;
-                            saveState();
-                            render();
-                            showToast('백업이 복원되었습니다');
-                        } catch (err) {
-                            showToast('잘못된 파일 형식입니다');
-                        }
-                    };
-                    reader.readAsText(file);
-                }
-            });
-
-            // 구독자 토글
-            document.querySelectorAll('.toggle-sub-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const id = parseInt(btn.dataset.id);
-                    const sub = state.subscribers.find(s => s.id === id);
-                    if (sub) {
-                        sub.subscribed = !sub.subscribed;
-                        saveState();
-                        render();
-                    }
-                });
-            });
-
-            // 구독자 삭제
-            document.querySelectorAll('.delete-sub-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    if (confirm('삭제하시겠습니까?')) {
-                        const id = parseInt(btn.dataset.id);
-                        state.subscribers = state.subscribers.filter(s => s.id !== id);
-                        saveState();
-                        render();
-                        showToast('삭제되었습니다');
-                    }
-                });
-            });
-
             // 구독자 추가
             document.getElementById('addSubscriberBtn')?.addEventListener('click', () => {
-                const email = prompt('이메일을 입력하세요:');
+                const email = prompt('이메일:');
                 if (email) {
-                    const newId = Math.max(...state.subscribers.map(s => s.id), 0) + 1;
+                    const newId = Math.max(0, ...state.subscribers.map(s => s.id)) + 1;
                     state.subscribers.push({
                         id: newId,
                         email,
@@ -2068,9 +1125,85 @@
                 }
             });
 
-            // 전체 데이터 초기화
-            document.getElementById('clearAllBtn')?.addEventListener('click', () => {
-                if (confirm('모든 데이터를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
+            // 구독자 토글
+            document.querySelectorAll('.toggle-sub').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const s = state.subscribers.find(x => x.id === parseInt(btn.dataset.id));
+                    if (s) {
+                        s.subscribed = !s.subscribed;
+                        saveState();
+                        render();
+                    }
+                });
+            });
+
+            // 구독자 삭제
+            document.querySelectorAll('.delete-sub').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    if (confirm('삭제하시겠습니까?')) {
+                        state.subscribers = state.subscribers.filter(s => s.id !== parseInt(btn.dataset.id));
+                        saveState();
+                        render();
+                        showToast('삭제되었습니다');
+                    }
+                });
+            });
+
+            // API 키 저장
+            document.getElementById('saveApiKeyBtn')?.addEventListener('click', () => {
+                state.geminiApiKey = document.getElementById('apiKeyInput').value;
+                localStorage.setItem('bidbuy_gemini_key', state.geminiApiKey);
+                showToast('API 키가 저장되었습니다');
+                render();
+            });
+
+            // API 키 토글
+            document.getElementById('toggleKeyBtn')?.addEventListener('click', () => {
+                state.showApiKey = !state.showApiKey;
+                render();
+            });
+
+            // API 테스트
+            document.getElementById('testApiKeyBtn')?.addEventListener('click', async () => {
+                const key = document.getElementById('apiKeyInput').value;
+                if (!key) { showToast('API 키를 입력해주세요'); return; }
+
+                showToast('연결 테스트 중...');
+                try {
+                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ contents: [{ parts: [{ text: '테스트' }] }], generationConfig: { maxOutputTokens: 10 } })
+                    });
+                    const data = await res.json();
+
+                    if (data.candidates) {
+                        showToast('✅ 연결 성공!');
+                        state.geminiApiKey = key;
+                        localStorage.setItem('bidbuy_gemini_key', key);
+                        render();
+                    } else {
+                        showToast('❌ 오류: ' + (data.error?.message || '알 수 없는 오류'));
+                    }
+                } catch (err) {
+                    showToast('❌ 연결 실패: ' + err.message);
+                }
+            });
+
+            // 백업
+            document.getElementById('exportBtn')?.addEventListener('click', () => {
+                const data = { salesData: state.salesData, trendData: state.trendData, newsletters: state.newsletters, subscribers: state.subscribers };
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = `bidbuy_backup_${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+                showToast('백업 파일 다운로드');
+            });
+
+            // 초기화
+            document.getElementById('resetBtn')?.addEventListener('click', () => {
+                if (confirm('모든 데이터를 삭제하시겠습니까?')) {
                     localStorage.clear();
                     location.reload();
                 }
@@ -2079,50 +1212,30 @@
 
         async function handleFileUpload(file) {
             try {
-                showToast('파일을 분석중입니다...');
+                showToast('파일 분석 중...');
                 const data = await parseExcel(file);
                 state.salesData = data;
                 saveState();
                 render();
                 showToast(`${data.length}건의 데이터를 불러왔습니다`);
-            } catch (error) {
-                showToast('파일 처리 중 오류가 발생했습니다');
-                console.error(error);
+            } catch (err) {
+                showToast('파일 처리 오류: ' + err.message);
             }
         }
 
-        function buildAIPrompt(type) {
+        function buildPrompt(type) {
             const top5 = state.trendData.slice(0, 5);
-            const totalSearches = state.trendData.reduce((s, d) => s + d.searches, 0);
-            const categories = [...new Set(state.trendData.map(d => d.category))];
-
             const dataContext = `
-[데이터]
-- 기간: ${state.weekInfo.month}월 ${state.weekInfo.week}주차
-- 총 검색량: ${totalSearches.toLocaleString()}건
-- TOP 5 인기 키워드:
-${top5.map((item, i) => `  ${i+1}. ${item.keyword} (${item.category}) - ${item.searches}건, 전주대비 ${item.change >= 0 ? '+' : ''}${item.change}%`).join('\n')}
-- 주요 카테고리: ${categories.join(', ')}
+[데이터] ${state.weekInfo.month}월 ${state.weekInfo.week}주차
+TOP 5 키워드:
+${top5.map((t, i) => `${i+1}. ${t.keyword} (${t.category}) - ${t.searches}건, ${t.change >= 0 ? '+' : ''}${t.change}%`).join('\n')}
 `;
 
             const prompts = {
-                newsletter: `당신은 비드바이코리아(일본 구매대행 20년 전통)의 마케팅 담당자입니다.
-아래 데이터를 바탕으로 고객에게 보낼 뉴스레터 본문을 작성해주세요.
-
-${dataContext}
-
-[작성 가이드]
-- 톤: 친근하고 대화하듯이, 하지만 전문성도 느껴지게
-- 이모지 적절히 활용 (과하지 않게)
-- 300~400자 내외
-
-자연스럽고 읽고 싶은 뉴스레터 본문만 작성해주세요.`,
-                blog: `일본 구매대행 전문 블로거로서 SEO에 좋은 블로그 포스트를 작성해주세요.\n${dataContext}\n600~800자, 제목 포함`,
-                sns: `비드바이코리아 SNS 담당자로서 인스타그램용 포스트를 작성해주세요.\n${dataContext}\n150자 내외, 해시태그 포함`,
-                product_desc: `1위 상품 ${top5[0]?.keyword}에 대한 상세 설명을 작성해주세요.\n${dataContext}\n200~300자`,
-                weekly_insight: `내부 공유용 주간 인사이트를 작성해주세요.\n${dataContext}\n500자 내외`
+                newsletter: `비드바이코리아 마케팅 담당자로서 아래 데이터 기반 뉴스레터 본문을 작성해주세요.\n${dataContext}\n톤: 친근하고 전문적, 300~400자, 이모지 적절히 활용`,
+                blog: `일본 구매대행 전문 블로거로서 SEO 블로그 포스트를 작성해주세요.\n${dataContext}\n제목 포함, 600~800자`,
+                sns: `비드바이코리아 SNS 담당자로서 인스타그램용 포스트를 작성해주세요.\n${dataContext}\n150자 내외, 해시태그 5~7개`
             };
-
             return prompts[type] || prompts.newsletter;
         }
 
